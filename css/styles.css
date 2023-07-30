@@ -1,0 +1,70 @@
+/* @import url('https://fonts.googleapis.com/css2?family=Poppins&display=swap'); */
+
+:root {
+    --font-color-base: #363636;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('../fonts/Poppins/Poppins-Light.ttf') formate('truetype');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('../fonts/Poppins/Poppins-Regular.ttf') formate('truetype');
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('../fonts/Poppins/Poppins-Medium.ttf') formate('truetype');
+    font-weight: 600;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('../fonts/Poppins/Poppins-SemiBold.ttf') formate('truetype');
+    font-weight: 700;
+    font-style: normal;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    font-size: 20px;
+    color: var(--font-color-base);
+}
+
+div {
+    height: 80%;
+    width: 60%;
+    padding-top: 10%;
+    padding-left: 20%;
+
+}
+
+a:link {
+    color: var(--font-color-base);
+    text-decoration: underline;
+}
+
+a:visited {
+    color: var(--font-color-base);
+    text-decoration: none;
+}
+
+a:hover {
+    background-color: var(--font-color-base);
+    color: #ffffff;
+}
+
+a:active {
+    color: #363636;
+}
+
+b {
+    font-weight: 600;
+}
