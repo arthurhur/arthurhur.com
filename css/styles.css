@@ -68,7 +68,8 @@ div {
     }
 
     div {
-        padding-left: 0;
+        width: 90%;
+        padding-left: 5%;
     }
 }
 
