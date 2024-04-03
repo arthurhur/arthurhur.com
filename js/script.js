@@ -3,8 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const preloadedImages = [];
 
     links.forEach(link => {
-        const bgImageUrl = link.dataset.bgimg;
 
+        // Preload background images
+        const bgImageUrl = link.dataset.bgimg;
         const img = new Image();
         img.src = bgImageUrl;
         preloadedImages.push(img);

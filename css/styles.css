@@ -1,5 +1,4 @@
 :root {
-    /* --font-color-base: #363636; */
     --font-color-base: #ffffff;
     --font-color-hover: #000000;
     --bg-image: url('/img/bg-black.jpg');
@@ -59,10 +58,6 @@ div {
     padding-left: 20%;
 
 }
-
-/* a {
-    transition: .2s;
-} */
 
 a:link {
     color: var(--font-color-base);
