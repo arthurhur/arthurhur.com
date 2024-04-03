@@ -64,7 +64,6 @@ div {
     body {
         background-attachment: scroll;
         background-position: center top;
-        background-size: cover;
     }
 
     div {
@@ -76,12 +75,6 @@ div {
 @media screen and (orientation: landscape) {
     body {
         background-position: center;
-        background-size: contain;
-    }
-
-    body::before {
-        background-position: center;
-        background-size: contain;
     }
 }
 
