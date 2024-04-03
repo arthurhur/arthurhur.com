@@ -66,6 +66,10 @@ div {
         background-size: cover;
         background-position: center top;
     }
+
+    div {
+        padding-left: 0;
+    }
 }
 
 a:link {
