@@ -1,10 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
     const links = document.querySelectorAll('a');
     const preloadedImages = [];
+    let timeoutId;
 
     links.forEach(link => {
-
-        // Preload background images
         const bgImageUrl = link.dataset.bgimg;
         const img = new Image();
         img.src = bgImageUrl;
@@ -12,10 +11,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         link.addEventListener('mouseover', () => {
             document.body.style.backgroundImage = `url('${bgImageUrl}')`;
+            clearTimeout(timeoutId);
         });
 
         link.addEventListener('mouseout', () => {
-            document.body.style.backgroundImage = 'var(--bg-image)';
+            timeoutId = setTimeout(() => {
+                document.body.style.backgroundImage = 'var(--bg-image)';
+            }, 200);
         });
     });
 });
