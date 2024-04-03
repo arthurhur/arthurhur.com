@@ -1,5 +1,8 @@
 :root {
-    --font-color-base: #363636;
+    /* --font-color-base: #363636; */
+    --font-color-base: #ffffff;
+    --font-color-hover: #000000;
+    --bg-image: url('/img/bg-black.jpg');
 }
 
 @font-face {
@@ -37,12 +40,12 @@ body {
     margin: 0;
     padding: 0;
     height: 100vh;
-    background-color: #ffffff;
-    background-image: none;
+    background-color: var(--font-color-hover);
+    background-image: var(--bg-image);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    transition: background-image .2s ease-in-out;
+    transition: background-image .4s ease-in-out;
 }
 
 body.hovered {
@@ -57,9 +60,9 @@ div {
 
 }
 
-a {
-    /* transition: .2s; */
-}
+/* a {
+    transition: .2s;
+} */
 
 a:link {
     color: var(--font-color-base);
@@ -73,11 +76,11 @@ a:visited {
 
 a:hover {
     background-color: var(--font-color-base);
-    color: #ffffff;
+    color: var(--font-color-hover);
 }
 
 a:active {
-    color: #363636;
+    color: var(--font-color-base);
 }
 
 b {
