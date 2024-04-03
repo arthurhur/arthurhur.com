@@ -11,14 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         link.addEventListener('mouseover', () => {
             document.body.style.backgroundImage = `url('${bgImageUrl}')`;
-            document.body.classList.add('hovered');
-            links.forEach(l => l.style.color = '#ffffff');
         });
 
         link.addEventListener('mouseout', () => {
-            document.body.style.backgroundImage = 'none';
-            document.body.classList.remove('hovered');
-            links.forEach(l => l.style.color = '');
+            document.body.style.backgroundImage = 'var(--bg-image)';
         });
     });
 });
