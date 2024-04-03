@@ -38,7 +38,7 @@ body {
     color: var(--font-color-base);
     margin: 0;
     padding: 0;
-    height: 100vh;
+    min-height: 100vh;
     background-attachment: fixed;
     background-color: var(--font-color-hover);
     background-image: var(--bg-image);
@@ -63,7 +63,21 @@ div {
 @media screen and (max-width: 768px) {
     body {
         background-attachment: scroll;
-        /* Add this line */
+        background-size: cover;
+        background-position: center top;
+    }
+    
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: inherit;
+        background-size: cover;
+        background-position: center top;
+        z-index: -1;
     }
 }
 
