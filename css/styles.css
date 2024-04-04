@@ -60,17 +60,7 @@ div {
 
 }
 
-@media screen {
-    body {
-        background-position: center top;
-    }
-}
-
 @media screen and (max-width: 768px) {
-    body {
-        background-attachment: scroll;
-    }
-
     div {
         width: 90%;
         padding-left: 5%;
