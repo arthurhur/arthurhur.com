@@ -61,6 +61,7 @@ div {
 }
 
 @media screen and (max-width: 768px) {
+    
     div {
         width: 90%;
         padding-left: 5%;
