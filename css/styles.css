@@ -1,35 +1,15 @@
 :root {
     --font-color-base: #ffffff;
     --font-color-hover: #000000;
-    --bg-image: url('/img/bg-black.jpg');
-}
-
-@font-face {
-    font-family: 'Poppins-Light';
-    src: url('../fonts/Poppins/Poppins-Light.ttf') format('truetype');
-    font-weight: 400;
-    font-style: normal;
+    --bg-default: url('img/bg-black.jpg');
 }
 
 @font-face {
     font-family: 'Poppins-Regular';
-    src: url('../fonts/Poppins/Poppins-Regular.ttf') format('truetype');
-    font-weight: 500;
+    src: url('../fonts/Poppins/Poppins-Regular.woff2') format('woff2');
+    font-weight: 400;
     font-style: normal;
-}
-
-@font-face {
-    font-family: 'Poppins-Medium';
-    src: url('../fonts/Poppins/Poppins-Medium.ttf') format('truetype');
-    font-weight: 600;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'Poppins-SemiBold';
-    src: url('../fonts/Poppins/Poppins-SemiBold.ttf') format('truetype');
-    font-weight: 700;
-    font-style: normal;
+    font-display: swap;
 }
 
 body {
@@ -39,30 +19,41 @@ body {
     margin: 0;
     padding: 0;
     min-height: 100vh;
-    background-attachment: fixed;
-    background-color: var(--font-color-hover);
-    background-image: var(--bg-image);
+    background-color: #000000;
+}
+
+/*
+ * Two stacked, full-viewport layers sit behind the content. JS double-buffers
+ * them: it sets the incoming photo on the hidden layer, then crossfades opacity
+ * (CSS can't transition background-image directly, so the old single-layer
+ * `transition` never actually faded).
+ */
+.bg-layer {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
-    transition: background-image .3s ease-in-out;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
 }
 
-body.hovered {
-    color: #ffffff;
+.bg-layer.is-visible {
+    opacity: 1;
 }
 
-div {
-    height: 80%;
+main {
+    display: block;
     width: 60%;
     padding-top: 5%;
     padding-left: 20%;
-
+    /* Keep white copy legible when a light photo fades in behind it. */
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 @media screen and (max-width: 768px) {
-    
-    div {
+    main {
         width: 90%;
         padding-left: 5%;
     }
@@ -78,15 +69,19 @@ a:visited {
     text-decoration: none;
 }
 
-a:hover {
+a:hover,
+a:focus-visible {
     background-color: var(--font-color-base);
     color: var(--font-color-hover);
+    text-shadow: none;
 }
 
 a:active {
     color: var(--font-color-base);
 }
 
-b {
-    font-weight: 600;
+@media (prefers-reduced-motion: reduce) {
+    .bg-layer {
+        transition: none;
+    }
 }
