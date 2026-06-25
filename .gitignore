@@ -1,2 +1,6 @@
 .DS_Store
 **/.DS_Store
+
+# Claude Code (local only, never published)
+CLAUDE.md
+.claude/
