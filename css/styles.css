@@ -1,6 +1,8 @@
 :root {
     --font-color-base: #ffffff;
-    --font-color-hover: #000000;
+    --dim: rgba(255, 255, 255, 0.55);
+    --dimmer: rgba(255, 255, 255, 0.32);
+    --rule: rgba(255, 255, 255, 0.14);
     --bg-default: url('img/bg-black.jpg');
 }
 
@@ -12,72 +14,210 @@
     font-display: swap;
 }
 
+* {
+    box-sizing: border-box;
+}
+
 body {
     font-family: 'Poppins-Regular', sans-serif;
-    font-size: 20px;
     color: var(--font-color-base);
     margin: 0;
-    padding: 0;
     min-height: 100vh;
+    line-height: 1.5;
     background-color: #000000;
+    /* Trailing letter-spacing on uppercase tracked text can spill past a narrow
+       viewport before it wraps; clip the overflow rather than show a scrollbar. */
+    overflow-x: hidden;
 }
 
 /*
- * Two stacked, full-viewport layers sit behind the content. JS double-buffers
- * them: it sets the incoming photo on the hidden layer, then crossfades opacity
- * (CSS can't transition background-image directly, so the old single-layer
- * `transition` never actually faded).
+ * Two double-buffered layers crossfade the hovered project's still behind the
+ * content (see js/script.js). z-index keeps them below the scrim and text.
  */
 .bg-layer {
     position: fixed;
     inset: 0;
-    z-index: -1;
+    z-index: -2;
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
     opacity: 0;
-    transition: opacity 0.3s ease-in-out;
+    transition: opacity 0.4s ease-in-out;
 }
 
 .bg-layer.is-visible {
     opacity: 1;
 }
 
+/*
+ * A left-weighted gradient scrim: keeps the 24-row index legible on the left
+ * while letting the film breathe, brighter, on the open right side.
+ */
+.scrim {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.74) 0%,
+        rgba(0, 0, 0, 0.46) 46%,
+        rgba(0, 0, 0, 0.10) 100%
+    );
+}
+
 main {
-    display: block;
-    width: 60%;
-    padding-top: 5%;
-    padding-left: 20%;
-    /* Keep white copy legible when a light photo fades in behind it. */
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: clamp(2.5rem, 7vw, 6rem) clamp(1.25rem, 6vw, 5rem) 4rem;
 }
 
-@media screen and (max-width: 768px) {
-    main {
-        width: 90%;
-        padding-left: 5%;
-    }
+/* ---- Masthead ---- */
+.masthead {
+    margin-bottom: clamp(2.5rem, 6vw, 5rem);
 }
 
-a:link {
+.masthead h1 {
+    margin: 0;
+    font-size: clamp(2.75rem, 9vw, 6.5rem);
+    line-height: 0.98;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    font-weight: 400;
+}
+
+.role {
+    margin: 0.9rem 0 0;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    font-size: 0.78rem;
+    color: var(--dim);
+}
+
+.standfirst {
+    margin: 1.6rem 0 0;
+    max-width: min(46ch, 100%);
+    font-size: 1.05rem;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+/* ---- Index ---- */
+.section-label {
+    margin: clamp(2rem, 5vw, 3.5rem) 0 0.3rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--rule);
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: var(--dim);
+}
+
+.works {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.works li {
+    border-top: 1px solid var(--rule);
+}
+
+.works li:first-child {
+    border-top: none;
+}
+
+.works a {
+    display: grid;
+    grid-template-columns: 2.6rem 1fr auto;
+    align-items: baseline;
+    gap: 1.25rem;
+    padding: 0.85rem 0;
+    text-decoration: none;
     color: var(--font-color-base);
-    text-decoration: underline;
 }
 
-a:visited {
+.num {
+    font-size: 0.8rem;
+    color: var(--dimmer);
+    font-variant-numeric: tabular-nums;
+    transition: color 0.2s ease;
+}
+
+.title {
+    font-size: clamp(1.15rem, 2.4vw, 1.7rem);
+    letter-spacing: 0.005em;
+}
+
+.context {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--dim);
+    text-align: right;
+    transition: color 0.2s ease;
+}
+
+.works a:hover,
+.works a:focus-visible {
+    outline: none;
+}
+
+.works a:hover .title,
+.works a:focus-visible .title {
+    text-decoration: underline;
+    text-underline-offset: 0.22em;
+}
+
+.works a:hover .num,
+.works a:hover .context,
+.works a:focus-visible .num,
+.works a:focus-visible .context {
+    color: var(--font-color-base);
+}
+
+/* ---- Contact ---- */
+.contact {
+    margin-top: clamp(2.5rem, 6vw, 4rem);
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--rule);
+}
+
+.contact a {
+    font-size: clamp(1.1rem, 2.4vw, 1.5rem);
     color: var(--font-color-base);
     text-decoration: none;
 }
 
-a:hover,
-a:focus-visible {
-    background-color: var(--font-color-base);
-    color: var(--font-color-hover);
-    text-shadow: none;
+.contact a:hover,
+.contact a:focus-visible {
+    outline: none;
+    text-decoration: underline;
+    text-underline-offset: 0.22em;
 }
 
-a:active {
-    color: var(--font-color-base);
+/* ---- Narrow screens ---- */
+@media (max-width: 640px) {
+    .scrim {
+        background: rgba(0, 0, 0, 0.62);
+    }
+
+    .role {
+        letter-spacing: 0.16em;
+        font-size: 0.72rem;
+    }
+
+    .works a {
+        grid-template-columns: 2rem 1fr;
+        gap: 0.9rem 0.9rem;
+    }
+
+    .context {
+        grid-column: 2;
+        text-align: left;
+        letter-spacing: 0.08em;
+        margin-top: 0.15rem;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
