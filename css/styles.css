@@ -6,28 +6,28 @@
     --bg-default: url('img/bg-black.jpg');
 }
 
+/* One family, three weights — the page's whole type system. */
 @font-face {
-    font-family: 'Poppins-Regular';
+    font-family: 'Poppins';
+    src: url('../fonts/Poppins/Poppins-Light.woff2') format('woff2');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Poppins';
     src: url('../fonts/Poppins/Poppins-Regular.woff2') format('woff2');
     font-weight: 400;
     font-style: normal;
     font-display: swap;
 }
 
-/* Display serif, used only for the masthead name — the page's one type accent. */
 @font-face {
-    font-family: 'Fraunces-Display';
-    src: url('../fonts/Fraunces/Fraunces-Display.woff2') format('woff2');
-    font-weight: 400;
+    font-family: 'Poppins';
+    src: url('../fonts/Poppins/Poppins-Medium.woff2') format('woff2');
+    font-weight: 500;
     font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Fraunces-Display';
-    src: url('../fonts/Fraunces/Fraunces-Display-Italic.woff2') format('woff2');
-    font-weight: 400;
-    font-style: italic;
     font-display: swap;
 }
 
@@ -36,7 +36,7 @@
 }
 
 body {
-    font-family: 'Poppins-Regular', sans-serif;
+    font-family: 'Poppins', sans-serif;
     color: var(--font-color-base);
     margin: 0;
     min-height: 100vh;
@@ -94,29 +94,37 @@ main {
     margin-bottom: clamp(2.5rem, 6vw, 5rem);
 }
 
-.masthead h1 {
+/*
+ * The masthead is one integrated statement: the name is the subject of the
+ * sentence, set in italic, in the same serif voice as the supporting line.
+ */
+.statement {
     margin: 0;
-    font-family: 'Fraunces-Display', Georgia, 'Times New Roman', serif;
-    font-size: clamp(2.6rem, 7vw, 5rem);
-    line-height: 1;
-    letter-spacing: -0.01em;
-    font-weight: 400;
+    max-width: 19ch;
+    font-weight: 300;
+    font-size: clamp(1.9rem, 4.6vw, 2.85rem);
+    line-height: 1.22;
+    letter-spacing: -0.015em;
+    color: #ffffff;
 }
 
-.masthead h1 .sur {
-    font-style: italic;
+/* The name leads the sentence, carried by weight rather than a second face. */
+.statement .nm {
+    font-weight: 500;
 }
 
-.lead {
-    margin: 1.4rem 0 0;
-    max-width: min(54ch, 100%);
-    font-size: clamp(1.1rem, 1.7vw, 1.4rem);
-    line-height: 1.45;
-    color: rgba(255, 255, 255, 0.92);
+.sub {
+    margin: 1.5rem 0 0;
+    max-width: 48ch;
+    font-weight: 300;
+    font-size: clamp(1.02rem, 1.4vw, 1.18rem);
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.6);
 }
 
+/* Interface utility — kept in the sans, like the index below it. */
 .hint {
-    margin: 1rem 0 0;
+    margin: 1.5rem 0 0;
     font-size: 0.8rem;
     letter-spacing: 0.04em;
     color: var(--dim);
