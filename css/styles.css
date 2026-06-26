@@ -103,7 +103,7 @@ main {
 
 /* ---- Index ---- */
 .section-label {
-    margin: clamp(2rem, 5vw, 3.5rem) 0 0.3rem;
+    margin: clamp(2rem, 5vw, 3.5rem) 0 0.5rem;
     padding-top: 1.1rem;
     border-top: 1px solid var(--rule);
     text-transform: uppercase;
@@ -111,6 +111,14 @@ main {
     font-size: 0.72rem;
     font-weight: 400;
     color: var(--dim);
+}
+
+.section-intro {
+    margin: 0 0 1.2rem;
+    max-width: 54ch;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.74);
 }
 
 .works {
@@ -130,7 +138,7 @@ main {
 /* ---- Row (toggle button) ---- */
 .row {
     display: grid;
-    grid-template-columns: 2.6rem minmax(0, 1fr) 1.5rem;
+    grid-template-columns: minmax(0, 1fr) 1.5rem;
     align-items: baseline;
     column-gap: 1.25rem;
     width: 100%;
@@ -146,13 +154,6 @@ main {
 
 .row:focus-visible {
     outline: none;
-}
-
-.num {
-    font-size: 0.8rem;
-    color: var(--dimmer);
-    font-variant-numeric: tabular-nums;
-    transition: color 0.2s ease;
 }
 
 .body {
@@ -181,9 +182,7 @@ main {
     text-underline-offset: 0.22em;
 }
 
-.row:hover .num,
 .row:hover .desc,
-.row:focus-visible .num,
 .row:focus-visible .desc {
     color: var(--font-color-base);
 }
@@ -241,7 +240,7 @@ main {
 }
 
 .panel-body {
-    padding: 0.2rem 0 1.8rem calc(2.6rem + 1.25rem);
+    padding: 0.2rem 0 1.8rem;
     max-width: 760px;
 }
 
@@ -329,12 +328,8 @@ main {
     }
 
     .row {
-        grid-template-columns: 2rem minmax(0, 1fr) 1.25rem;
+        grid-template-columns: minmax(0, 1fr) 1.25rem;
         column-gap: 0.9rem;
-    }
-
-    .panel-body {
-        padding-left: calc(2rem + 0.9rem);
     }
 }
 
