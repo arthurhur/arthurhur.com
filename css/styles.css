@@ -236,9 +236,16 @@ main {
     transition: color 0.2s ease;
 }
 
-.row:hover .client,
-.row:focus-visible .client {
+/* Once a row is hovered its still fades in behind the whole list, so these
+   small descriptions can go muddy over the image. Lift them all while the work
+   section is engaged, and brighten the row you're actually on. */
+.work:hover .description {
     color: var(--muted-warm);
+}
+
+.row:hover .description,
+.row:focus-visible .description {
+    color: var(--fg);
 }
 
 /* "+" that rotates to gold "×" when the row is open */
