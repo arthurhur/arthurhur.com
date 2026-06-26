@@ -1,16 +1,21 @@
 document.addEventListener('DOMContentLoaded', () => {
-    setupBackground();
-    setupAccordion();
+    const background = setupBackground();
+    setupAccordion(background);
 });
 
 /* ---- Background crossfade -------------------------------------------------
  * Two double-buffered layers; paint the incoming still on the hidden one,
- * swap which is visible, then flip the references. Triggered by hover and
- * keyboard focus on any [data-bgimg] in main (rows + the contact link).
+ * swap which is visible, then flip the references.
+ *
+ * A "pinned" image is the resting background. Hover/focus previews a film;
+ * on mouse-out/blur it settles back to whatever is pinned (the open project's
+ * film, or the default when nothing is open). The accordion drives pinning.
  */
 function setupBackground() {
     const layers = document.querySelectorAll('.bg-layer');
-    if (layers.length < 2) return;
+    if (layers.length < 2) {
+        return { pin() {}, unpin() {} };
+    }
 
     const defaultBg = getComputedStyle(document.documentElement)
         .getPropertyValue('--bg-default')
@@ -19,6 +24,7 @@ function setupBackground() {
     let front = layers[0];
     let back = layers[1];
     let current = defaultBg;
+    let pinned = defaultBg;
 
     front.style.backgroundImage = defaultBg;
     front.classList.add('is-visible');
@@ -38,31 +44,46 @@ function setupBackground() {
     document.querySelectorAll('main [data-bgimg]').forEach((el) => {
         const image = `url("${el.dataset.bgimg}")`;
 
-        // Preload only on hover-capable devices.
         if (canHover) {
             new Image().src = el.dataset.bgimg;
         }
 
-        const enter = () => {
+        const preview = () => {
             clearTimeout(timeoutId);
             show(image);
         };
-        const leave = () => {
-            timeoutId = setTimeout(() => show(defaultBg), 200);
+        // Settle back to the pinned film, not the default, so an open project
+        // stays on screen while you move into its panel or peek at other rows.
+        const settle = () => {
+            timeoutId = setTimeout(() => show(pinned), 200);
         };
 
-        el.addEventListener('mouseover', enter);
-        el.addEventListener('mouseout', leave);
-        el.addEventListener('focus', enter);
-        el.addEventListener('blur', leave);
+        el.addEventListener('mouseover', preview);
+        el.addEventListener('mouseout', settle);
+        el.addEventListener('focus', preview);
+        el.addEventListener('blur', settle);
     });
+
+    return {
+        // Pin a film as the resting background and show it immediately.
+        pin(image) {
+            pinned = image;
+            clearTimeout(timeoutId);
+            show(image);
+        },
+        // Stop pinning. Don't force a swap: if the cursor is still on the row
+        // its film stays until you leave, then it settles back to default.
+        unpin() {
+            pinned = defaultBg;
+        },
+    };
 }
 
 /* ---- Accordion ------------------------------------------------------------
  * Clone the placeholder panel template after each row, wire ARIA, and toggle
- * one open at a time. Panels animate open via CSS (grid-template-rows 0fr->1fr).
+ * one open at a time. Opening a project pins its film; closing un-pins.
  */
-function setupAccordion() {
+function setupAccordion(background) {
     const template = document.getElementById('panel-tpl');
     if (!template) return;
 
@@ -95,6 +116,12 @@ function setupAccordion() {
 
             row.setAttribute('aria-expanded', String(!isOpen));
             panel.classList.toggle('open', !isOpen);
+
+            if (isOpen) {
+                background.unpin();
+            } else {
+                background.pin(`url("${row.dataset.bgimg}")`);
+            }
         });
     });
 }
