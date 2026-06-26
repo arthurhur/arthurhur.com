@@ -85,7 +85,7 @@ main {
     padding-bottom: 8px;
 }
 
-.brand {
+.name {
     font-family: var(--sans);
     font-weight: 500;
     font-size: 16.5px;
@@ -94,14 +94,6 @@ main {
     color: var(--fg);
 }
 
-.role-tag {
-    /* font-family: var(--mono); */
-    font-family: var(--sans);
-    font-size: 16.5px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--muted);
-}
 
 /* ---- Statement ---- */
 .statement-block {
@@ -130,7 +122,7 @@ main {
 
 /* ---- Selected work ---- */
 .work {
-    margin-top: clamp(4.5rem, 9vw, 6.5rem);
+    margin-top: clamp(4.5rem, 7vw, 6.5rem);
 }
 
 .work-head {
@@ -138,6 +130,25 @@ main {
     justify-content: space-between;
     align-items: baseline;
     padding-bottom: 14px;
+}
+
+/* A later group header with no standfirst above it (Early Work): a clear gap
+   to separate it from the list before. Headers preceded by a .work-intro drop
+   this, since the standfirst already carries the section break. */
+.work-head--group {
+    margin-top: clamp(3rem, 6vw, 4.5rem);
+}
+
+/* Standfirst above a queued section, echoing how the page .intro sits above
+   "Selected Work". Carries the section-break gap itself (big margin above,
+   small below to its own header). */
+.work-intro {
+    max-width: 760px;
+    margin: clamp(4.5rem, 9vw, 6.5rem) 0 1.4rem;
+    font-size: 16.5px;
+    line-height: 1.62;
+    color: var(--muted-warm);
+    text-wrap: pretty;
 }
 
 .work-head-label {
