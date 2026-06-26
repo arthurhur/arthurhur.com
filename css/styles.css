@@ -1,34 +1,18 @@
 :root {
-    --font-color-base: #ffffff;
-    --dim: rgba(255, 255, 255, 0.55);
-    --dimmer: rgba(255, 255, 255, 0.32);
-    --rule: rgba(255, 255, 255, 0.14);
-    --bg-default: url('img/bg-black.jpg');
-}
+    --bg: #141210;
+    --fg: #ece7dd;
+    --muted: #8f897c;
+    --muted-warm: #b3ac9f;
+    --accent: #c9a24b;
+    --rule: rgba(236, 231, 221, 0.13);
+    --hover-tint: rgba(201, 162, 75, 0.07);
 
-/* One family, three weights — the page's whole type system. */
-@font-face {
-    font-family: 'Poppins';
-    src: url('../fonts/Poppins/Poppins-Light.woff2') format('woff2');
-    font-weight: 300;
-    font-style: normal;
-    font-display: swap;
-}
+    /* No film at rest — the warm background shows; films appear on hover. */
+    --bg-default: none;
 
-@font-face {
-    font-family: 'Poppins';
-    src: url('../fonts/Poppins/Poppins-Regular.woff2') format('woff2');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Poppins';
-    src: url('../fonts/Poppins/Poppins-Medium.woff2') format('woff2');
-    font-weight: 500;
-    font-style: normal;
-    font-display: swap;
+    --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+    --sans: 'Schibsted Grotesk', system-ui, -apple-system, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
 }
 
 * {
@@ -36,15 +20,20 @@
 }
 
 body {
-    font-family: 'Poppins', sans-serif;
-    color: var(--font-color-base);
+    font-family: var(--sans);
+    color: var(--fg);
     margin: 0;
     min-height: 100vh;
     line-height: 1.5;
-    background-color: #000000;
-    /* Trailing letter-spacing on uppercase tracked text can spill past a narrow
-       viewport before it wraps; clip the overflow rather than show a scrollbar. */
+    background-color: var(--bg);
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+::selection {
+    background: var(--accent);
+    color: var(--bg);
 }
 
 /*
@@ -67,8 +56,8 @@ body {
 }
 
 /*
- * A left-weighted gradient scrim: keeps the index legible on the left while
- * letting the film breathe, brighter, on the open right side.
+ * Left-weighted scrim in the background's own colour: invisible over the flat
+ * warm background at rest, and a legibility wash once a film fades in.
  */
 .scrim {
     position: fixed;
@@ -77,16 +66,16 @@ body {
     pointer-events: none;
     background: linear-gradient(
         90deg,
-        rgba(0, 0, 0, 0.74) 0%,
-        rgba(0, 0, 0, 0.46) 46%,
-        rgba(0, 0, 0, 0.10) 100%
+        rgba(20, 18, 16, 0.88) 0%,
+        rgba(20, 18, 16, 0.52) 46%,
+        rgba(20, 18, 16, 0.12) 100%
     );
 }
 
 main {
-    max-width: 1100px;
+    max-width: 1140px;
     margin: 0 auto;
-    padding: clamp(2.5rem, 7vw, 6rem) clamp(1.25rem, 6vw, 5rem) 4rem;
+    padding: clamp(2.75rem, 7vw, 6rem) clamp(1.25rem, 6vw, 5rem) 4rem;
 }
 
 /* ---- Masthead ---- */
@@ -95,59 +84,61 @@ main {
 }
 
 /*
- * The masthead is one integrated statement: the name is the subject of the
- * sentence, set in italic, in the same serif voice as the supporting line.
+ * One integrated statement: the name is the subject of the sentence, set in
+ * the serif italic, the rest in the serif roman — the page's editorial voice.
  */
 .statement {
     margin: 0;
-    max-width: 19ch;
-    font-weight: 300;
-    font-size: clamp(1.9rem, 4.6vw, 2.85rem);
-    line-height: 1.22;
-    letter-spacing: -0.015em;
-    color: #ffffff;
+    max-width: 21ch;
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(2.05rem, 5vw, 3.25rem);
+    line-height: 1.16;
+    letter-spacing: -0.013em;
+    color: var(--fg);
 }
 
-/* The name leads the sentence, carried by weight rather than a second face. */
 .statement .nm {
-    font-weight: 500;
+    font-style: italic;
 }
 
 .sub {
-    margin: 1.5rem 0 0;
+    margin: 1.6rem 0 0;
     max-width: 48ch;
-    font-weight: 300;
-    font-size: clamp(1.02rem, 1.4vw, 1.18rem);
-    line-height: 1.55;
-    color: rgba(255, 255, 255, 0.6);
+    font-size: clamp(1rem, 1.4vw, 1.15rem);
+    line-height: 1.6;
+    color: var(--muted-warm);
 }
 
-/* Interface utility — kept in the sans, like the index below it. */
+/* Interface utility — set as a mono eyebrow, like the section labels. */
 .hint {
-    margin: 1.5rem 0 0;
-    font-size: 0.8rem;
-    letter-spacing: 0.04em;
-    color: var(--dim);
+    margin: 1.7rem 0 0;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--muted);
 }
 
 /* ---- Index ---- */
 .section-label {
-    margin: clamp(2rem, 5vw, 3.5rem) 0 0.5rem;
-    padding-top: 1.1rem;
+    margin: clamp(2.25rem, 5vw, 3.75rem) 0 0.6rem;
+    padding-top: 1.2rem;
     border-top: 1px solid var(--rule);
-    text-transform: uppercase;
-    letter-spacing: 0.24em;
+    font-family: var(--mono);
+    font-weight: 500;
     font-size: 0.72rem;
-    font-weight: 400;
-    color: var(--dim);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--fg);
 }
 
 .section-intro {
-    margin: 0 0 1.2rem;
+    margin: 0 0 1.3rem;
     max-width: 54ch;
-    font-size: 1rem;
-    line-height: 1.5;
-    color: rgba(255, 255, 255, 0.74);
+    font-size: 0.98rem;
+    line-height: 1.55;
+    color: var(--muted-warm);
 }
 
 .works {
@@ -172,16 +163,21 @@ main {
     column-gap: 1.25rem;
     width: 100%;
     margin: 0;
-    padding: 0.95rem 0;
+    padding: 1.05rem 0.65rem 1.05rem 0.5rem;
     background: none;
     border: 0;
+    border-radius: 3px;
     font: inherit;
-    color: var(--font-color-base);
+    color: var(--fg);
     text-align: left;
     cursor: pointer;
+    transition: background 0.25s ease, padding-left 0.25s ease;
 }
 
+.row:hover,
 .row:focus-visible {
+    background: var(--hover-tint);
+    padding-left: 1rem;
     outline: none;
 }
 
@@ -191,38 +187,35 @@ main {
 
 .title {
     display: block;
-    font-size: clamp(1.15rem, 2.4vw, 1.7rem);
-    letter-spacing: 0.005em;
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(1.3rem, 2.6vw, 1.9rem);
+    line-height: 1.1;
+    letter-spacing: -0.005em;
 }
 
 .desc {
     display: block;
-    margin-top: 0.2rem;
+    margin-top: 0.35rem;
     max-width: 54ch;
-    font-size: 0.92rem;
-    line-height: 1.4;
-    color: var(--dim);
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: var(--muted);
     transition: color 0.2s ease;
-}
-
-.row:hover .title,
-.row:focus-visible .title {
-    text-decoration: underline;
-    text-underline-offset: 0.22em;
 }
 
 .row:hover .desc,
 .row:focus-visible .desc {
-    color: var(--font-color-base);
+    color: var(--muted-warm);
 }
 
-/* "+" that rotates to "×" when the row is open */
+/* "+" that rotates to gold "×" when the row is open */
 .chev {
     position: relative;
     align-self: center;
     width: 1.5rem;
     height: 1.5rem;
-    color: var(--dimmer);
+    color: var(--muted);
     transition: color 0.2s ease, transform 0.3s ease;
 }
 
@@ -244,11 +237,11 @@ main {
 
 .row:hover .chev,
 .row:focus-visible .chev {
-    color: var(--font-color-base);
+    color: var(--fg);
 }
 
 .row[aria-expanded="true"] .chev {
-    color: var(--font-color-base);
+    color: var(--accent);
     transform: rotate(45deg);
 }
 
@@ -277,13 +270,13 @@ main {
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Semi-opaque so the placeholder reads as a media slot over any film
-       behind it (real images/video would be opaque). */
-    background: rgba(8, 8, 10, 0.55);
+    /* Warm, semi-opaque so the placeholder reads as a media slot over any film. */
+    background: rgba(20, 18, 16, 0.55);
     border: 1px solid var(--rule);
     border-radius: 2px;
-    color: var(--dim);
-    font-size: 0.66rem;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.62rem;
     text-transform: uppercase;
     letter-spacing: 0.18em;
 }
@@ -294,9 +287,10 @@ main {
 }
 
 .filler {
-    margin: 1.1rem 0 0;
+    margin: 1.2rem 0 0;
     max-width: 56ch;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--muted-warm);
+    line-height: 1.6;
 }
 
 .stills {
@@ -312,12 +306,13 @@ main {
 
 .watch {
     display: inline-block;
-    margin-top: 1.3rem;
-    padding: 0.55rem 0.95rem;
-    border: 1px solid var(--rule);
-    color: var(--font-color-base);
+    margin-top: 1.4rem;
+    padding: 0.6rem 1rem;
+    border: 1px solid rgba(201, 162, 75, 0.5);
+    color: var(--accent);
     text-decoration: none;
-    font-size: 0.78rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.14em;
     transition: background-color 0.2s ease, color 0.2s ease;
@@ -326,34 +321,37 @@ main {
 .watch:hover,
 .watch:focus-visible {
     outline: none;
-    background: var(--font-color-base);
-    color: #000000;
+    background: var(--accent);
+    color: var(--bg);
 }
 
 /* ---- Contact ---- */
 .contact {
-    margin-top: clamp(2.5rem, 6vw, 4rem);
-    padding-top: 1.4rem;
+    margin-top: clamp(2.75rem, 6vw, 4.5rem);
+    padding-top: 1.6rem;
     border-top: 1px solid var(--rule);
 }
 
 .contact a {
-    font-size: clamp(1.1rem, 2.4vw, 1.5rem);
-    color: var(--font-color-base);
+    font-family: var(--serif);
+    font-size: clamp(1.5rem, 3vw, 2.1rem);
+    color: var(--fg);
     text-decoration: none;
+    border-bottom: 1px solid rgba(236, 231, 221, 0.26);
+    padding-bottom: 3px;
+    transition: border-color 0.25s ease;
 }
 
 .contact a:hover,
 .contact a:focus-visible {
     outline: none;
-    text-decoration: underline;
-    text-underline-offset: 0.22em;
+    border-color: var(--accent);
 }
 
 /* ---- Narrow screens ---- */
 @media (max-width: 640px) {
     .scrim {
-        background: rgba(0, 0, 0, 0.62);
+        background: rgba(20, 18, 16, 0.66);
     }
 
     .row {
@@ -365,7 +363,8 @@ main {
 @media (prefers-reduced-motion: reduce) {
     .bg-layer,
     .panel,
-    .chev {
+    .chev,
+    .row {
         transition: none;
     }
 }
