@@ -1,9 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
+    setupBackground();
+    setupAccordion();
+});
+
+/* ---- Background crossfade -------------------------------------------------
+ * Two double-buffered layers; paint the incoming still on the hidden one,
+ * swap which is visible, then flip the references. Triggered by hover and
+ * keyboard focus on any [data-bgimg] in main (rows + the contact link).
+ */
+function setupBackground() {
     const layers = document.querySelectorAll('.bg-layer');
     if (layers.length < 2) return;
 
-    // Authored value of --bg-default (custom props aren't normalized, so this
-    // string stays exactly as written in the CSS).
     const defaultBg = getComputedStyle(document.documentElement)
         .getPropertyValue('--bg-default')
         .trim();
@@ -15,8 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
     front.style.backgroundImage = defaultBg;
     front.classList.add('is-visible');
 
-    // Crossfade to `image` by painting it on the hidden layer, swapping which
-    // layer is visible, then flipping the front/back references.
     const show = (image) => {
         if (image === current) return;
         current = image;
@@ -26,17 +32,15 @@ document.addEventListener('DOMContentLoaded', () => {
         [front, back] = [back, front];
     };
 
-    const links = document.querySelectorAll('main a[data-bgimg]');
     const canHover = window.matchMedia('(hover: hover)').matches;
     let timeoutId;
 
-    links.forEach((link) => {
-        const image = `url("${link.dataset.bgimg}")`;
+    document.querySelectorAll('main [data-bgimg]').forEach((el) => {
+        const image = `url("${el.dataset.bgimg}")`;
 
-        // Preload only on hover-capable devices — touch devices never trigger
-        // the swap, so there's no point pulling ~8MB of photos over cellular.
+        // Preload only on hover-capable devices.
         if (canHover) {
-            new Image().src = link.dataset.bgimg;
+            new Image().src = el.dataset.bgimg;
         }
 
         const enter = () => {
@@ -47,10 +51,50 @@ document.addEventListener('DOMContentLoaded', () => {
             timeoutId = setTimeout(() => show(defaultBg), 200);
         };
 
-        // mouse + keyboard so tabbing through links swaps the background too.
-        link.addEventListener('mouseover', enter);
-        link.addEventListener('mouseout', leave);
-        link.addEventListener('focus', enter);
-        link.addEventListener('blur', leave);
+        el.addEventListener('mouseover', enter);
+        el.addEventListener('mouseout', leave);
+        el.addEventListener('focus', enter);
+        el.addEventListener('blur', leave);
     });
-});
+}
+
+/* ---- Accordion ------------------------------------------------------------
+ * Clone the placeholder panel template after each row, wire ARIA, and toggle
+ * one open at a time. Panels animate open via CSS (grid-template-rows 0fr->1fr).
+ */
+function setupAccordion() {
+    const template = document.getElementById('panel-tpl');
+    if (!template) return;
+
+    const rows = [...document.querySelectorAll('.row')];
+
+    rows.forEach((row, i) => {
+        const panel = template.content.firstElementChild.cloneNode(true);
+        const id = `panel-${i + 1}`;
+        const title = row.querySelector('.title').textContent;
+
+        panel.id = id;
+        panel.setAttribute('role', 'region');
+        panel.setAttribute('aria-label', `${title} — details`);
+        panel.querySelector('.watch').href = row.dataset.href;
+
+        row.setAttribute('aria-controls', id);
+        row.setAttribute('aria-expanded', 'false');
+        row.after(panel);
+
+        row.addEventListener('click', () => {
+            const isOpen = row.getAttribute('aria-expanded') === 'true';
+
+            // Single-open: collapse any other expanded row.
+            rows.forEach((other) => {
+                if (other !== row) {
+                    other.setAttribute('aria-expanded', 'false');
+                    other.nextElementSibling.classList.remove('open');
+                }
+            });
+
+            row.setAttribute('aria-expanded', String(!isOpen));
+            panel.classList.toggle('open', !isOpen);
+        });
+    });
+}
