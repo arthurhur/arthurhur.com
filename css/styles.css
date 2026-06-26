@@ -139,12 +139,13 @@ main {
     margin-top: clamp(3rem, 6vw, 4.5rem);
 }
 
-/* Standfirst above a queued section, echoing how the page .intro sits above
-   "Selected Work". Carries the section-break gap itself (big margin above,
-   small below to its own header). */
+/* Standfirst that opens a section, echoing how the page .intro sits above
+   "Selected Work": a moderate gap above (separating it from the previous list)
+   and a large gap below — matching .work's margin-top — so the section label
+   gets the same airy space above it that "Selected Work" has. */
 .work-intro {
     max-width: 760px;
-    margin: clamp(4.5rem, 9vw, 6.5rem) 0 1.4rem;
+    margin: clamp(3rem, 6vw, 4.5rem) 0 clamp(4.5rem, 7vw, 6.5rem);
     font-size: 16.5px;
     line-height: 1.62;
     color: var(--muted-warm);
