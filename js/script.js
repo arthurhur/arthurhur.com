@@ -202,12 +202,14 @@ function setupAccordion(background) {
 }
 
 /* ---- Video embeds ---------------------------------------------------------
- * Map a project's watch link to a YouTube/Vimeo embed URL, then drop it into
- * the panel's video slot only when the panel opens — this keeps a dozen-odd
- * players and their third-party scripts off the initial page load. Links that
+ * Map a project's watch link to a YouTube/Vimeo embed, loaded only when the
+ * panel opens (keeps a dozen-odd players and their third-party scripts off the
+ * initial page load). YouTube gets a facade — the thumbnail plus a clean play
+ * button — so the real, autoplaying player loads only on click and skips
+ * YouTube's title/branding chrome. Vimeo loads its player directly. Links that
  * aren't YouTube/Vimeo are left as the placeholder.
  */
-function embedUrl(href) {
+function videoEmbed(href) {
     let url;
     try {
         url = new URL(href);
@@ -218,29 +220,23 @@ function embedUrl(href) {
 
     if (host === 'youtu.be') {
         const id = url.pathname.slice(1);
-        return id ? `https://www.youtube.com/embed/${id}` : null;
+        return id ? { embed: `https://www.youtube.com/embed/${id}`, ytId: id } : null;
     }
     if (host === 'youtube.com' || host === 'm.youtube.com') {
         const id = url.searchParams.get('v');
-        return id ? `https://www.youtube.com/embed/${id}` : null;
+        return id ? { embed: `https://www.youtube.com/embed/${id}`, ytId: id } : null;
     }
     if (host === 'vimeo.com') {
         const id = url.pathname.split('/').filter(Boolean)[0];
-        return /^\d+$/.test(id) ? `https://player.vimeo.com/video/${id}` : null;
+        return /^\d+$/.test(id) ? { embed: `https://player.vimeo.com/video/${id}`, ytId: null } : null;
     }
     if (host === 'player.vimeo.com') {
-        return href;
+        return { embed: href, ytId: null };
     }
     return null;
 }
 
-function loadEmbed(panel, href, title) {
-    const slot = panel.querySelector('.media--video');
-    if (!slot || slot.querySelector('iframe')) return;
-
-    const src = embedUrl(href);
-    if (!src) return;
-
+function makeIframe(src, title) {
     const iframe = document.createElement('iframe');
     iframe.src = src;
     iframe.title = title;
@@ -248,11 +244,59 @@ function loadEmbed(panel, href, title) {
     iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
     iframe.allowFullscreen = true;
     iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-    slot.replaceChildren(iframe);
+    return iframe;
 }
 
-// Remove the iframe so its film stops playing when a panel collapses.
+// YouTube facade: the thumbnail plus a clean play button. Clicking swaps in the
+// real, autoplaying player (the click is the user gesture autoplay needs).
+function buildFacade(info, title) {
+    const facade = document.createElement('button');
+    facade.type = 'button';
+    facade.className = 'video-facade';
+    facade.setAttribute('aria-label', `Play ${title}`);
+
+    const img = document.createElement('img');
+    img.alt = '';
+    img.loading = 'lazy';
+    img.src = `https://i.ytimg.com/vi/${info.ytId}/maxresdefault.jpg`;
+    // maxres isn't generated for every video; fall back to the always-present hq.
+    img.addEventListener('error', () => {
+        img.src = `https://i.ytimg.com/vi/${info.ytId}/hqdefault.jpg`;
+    }, { once: true });
+
+    const play = document.createElement('span');
+    play.className = 'play';
+    play.setAttribute('aria-hidden', 'true');
+
+    facade.append(img, play);
+    facade.addEventListener('click', () => {
+        // Trim what YouTube still lets us: related videos limited to this
+        // channel, no annotations, a white progress bar, inline on mobile.
+        const params = 'autoplay=1&rel=0&iv_load_policy=3&color=white&playsinline=1';
+        facade.replaceWith(makeIframe(`${info.embed}?${params}`, title));
+    });
+    return facade;
+}
+
+function loadEmbed(panel, href, title) {
+    const slot = panel.querySelector('.media--video');
+    if (!slot) return;
+
+    const info = videoEmbed(href);
+    if (!info) return; // not YouTube/Vimeo — leave the placeholder
+
+    slot.replaceChildren(
+        info.ytId ? buildFacade(info, title) : makeIframe(info.embed, title)
+    );
+}
+
+// Tear down whatever we injected (facade or playing iframe) when a panel
+// collapses, so playback stops and the next open starts from a clean slot.
 function unloadEmbed(panel) {
-    const iframe = panel.querySelector('.media--video iframe');
-    if (iframe) iframe.remove();
+    const slot = panel.querySelector('.media--video');
+    if (!slot || !slot.querySelector('iframe, .video-facade')) return;
+
+    const span = document.createElement('span');
+    span.textContent = 'Video';
+    slot.replaceChildren(span);
 }
