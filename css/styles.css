@@ -332,22 +332,43 @@ main {
     display: block;
 }
 
-.filler {
-    margin: 1.2rem 0 0;
+/* Empty placeholder where a still will go; replace with a <figure class="figure">. */
+.media--placeholder {
+    aspect-ratio: 16 / 9;
+}
+
+/* A panel is an ordered flow of blocks (prose, video, image) authored in any
+   order. Reset their margins and give the flow one consistent vertical rhythm.
+   Media spans the full content column; prose stays in a narrow, readable measure. */
+.panel-body > * {
+    margin: 0;
+}
+
+.panel-body > * + * {
+    margin-top: 1.3rem;
+}
+
+.panel-body p {
     max-width: 56ch;
     color: var(--muted-warm);
     line-height: 1.6;
 }
 
-.stills {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-    margin-top: 1.1rem;
+.figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
 }
 
-.media--still {
-    aspect-ratio: 4 / 3;
+.figure figcaption {
+    margin-top: 0.5rem;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
 }
 
 .watch {

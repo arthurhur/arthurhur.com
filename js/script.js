@@ -148,19 +148,18 @@ function setupScrollReveal(sources, show, defaultBg) {
 }
 
 /* ---- Accordion ------------------------------------------------------------
- * Clone the placeholder panel template after each row, wire ARIA, and toggle
- * one open at a time. Opening a project pins its film and lazy-loads its
- * YouTube/Vimeo embed; closing (or opening another) un-pins and unloads the
- * embed so playback stops.
+ * Each project's panel is written inline after its row in index.html; here we
+ * wire ARIA and toggle one open at a time. Opening a project pins its film and
+ * lazy-loads every YouTube/Vimeo embed in its panel (only the first autoplays);
+ * closing (or opening another) un-pins and unloads the embeds so playback stops.
  */
 function setupAccordion(background) {
-    const template = document.getElementById('panel-tpl');
-    if (!template) return;
-
     const rows = [...document.querySelectorAll('.row')];
 
     rows.forEach((row, i) => {
-        const panel = template.content.firstElementChild.cloneNode(true);
+        const panel = row.nextElementSibling;
+        if (!panel || !panel.classList.contains('panel')) return;
+
         const id = `panel-${i + 1}`;
         const title = row.querySelector('.title').textContent;
 
@@ -170,18 +169,17 @@ function setupAccordion(background) {
 
         row.setAttribute('aria-controls', id);
         row.setAttribute('aria-expanded', 'false');
-        row.after(panel);
 
         row.addEventListener('click', () => {
             const isOpen = row.getAttribute('aria-expanded') === 'true';
 
-            // Single-open: collapse any other expanded row and stop its film.
+            // Single-open: collapse any other expanded row and stop its film(s).
             rows.forEach((other) => {
                 if (other !== row) {
                     other.setAttribute('aria-expanded', 'false');
                     const otherPanel = other.nextElementSibling;
                     otherPanel.classList.remove('open');
-                    unloadEmbed(otherPanel);
+                    unloadEmbeds(otherPanel);
                 }
             });
 
@@ -190,11 +188,11 @@ function setupAccordion(background) {
             panel.classList.toggle('open', willOpen);
 
             if (willOpen) {
-                loadEmbed(panel, row.dataset.href, title);
+                loadPanelEmbeds(panel, title);
                 const bgimg = row.dataset.bgimg;
                 background.pin(bgimg ? `url("${bgimg}")` : '');
             } else {
-                unloadEmbed(panel);
+                unloadEmbeds(panel);
                 background.unpin();
             }
         });
@@ -208,7 +206,7 @@ function setupAccordion(background) {
  * browsers allow without friction — and loops, so it never lands on YouTube's
  * branded end screen; the player's own UI handles unmuting. Under
  * prefers-reduced-motion we don't autoplay; the native controls start it.
- * Links that aren't YouTube/Vimeo are left as the placeholder.
+ * Slots whose link isn't YouTube/Vimeo are left untouched.
  */
 function videoEmbed(href) {
     let url;
@@ -265,26 +263,27 @@ function makeIframe(src, title) {
     return iframe;
 }
 
-function loadEmbed(panel, href, title) {
-    const slot = panel.querySelector('.media--video');
-    if (!slot) return;
-
-    const info = videoEmbed(href);
-    if (!info) return; // not YouTube/Vimeo — leave the placeholder
-
-    // Autoplay only when motion is welcome; otherwise the native controls start
-    // it. Either way the autoplay is muted and the player's UI handles sound.
+// Load every YouTube/Vimeo embed in a panel when it opens. Only the first video
+// block autoplays (and only when motion is welcome); the rest wait for a click.
+// Autoplay is muted — the only autoplay browsers allow without friction — and
+// the player's own UI handles unmuting. A slot's own data-title overrides the
+// project title for the iframe's accessible name.
+function loadPanelEmbeds(panel, title) {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    slot.replaceChildren(makeIframe(embedSrc(info, !reduceMotion), title));
+    panel.querySelectorAll('.media--video[data-href]').forEach((slot, i) => {
+        if (slot.querySelector('iframe')) return; // already loaded
+        const info = videoEmbed(slot.dataset.href);
+        if (!info) return; // not YouTube/Vimeo — leave the slot untouched
+        const autoplay = i === 0 && !reduceMotion;
+        slot.replaceChildren(makeIframe(embedSrc(info, autoplay), slot.dataset.title || title));
+    });
 }
 
-// Tear down the player (and its toggle) when a panel collapses, so playback
-// stops and the next open starts from a clean slot.
-function unloadEmbed(panel) {
-    const slot = panel.querySelector('.media--video');
-    if (!slot || !slot.querySelector('iframe')) return;
-
-    const span = document.createElement('span');
-    span.textContent = 'Video';
-    slot.replaceChildren(span);
+// Tear down every player when a panel collapses, so playback stops and the next
+// open starts from clean slots.
+function unloadEmbeds(panel) {
+    if (!panel) return;
+    panel.querySelectorAll('.media--video').forEach((slot) => {
+        if (slot.querySelector('iframe')) slot.replaceChildren();
+    });
 }
