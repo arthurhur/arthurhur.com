@@ -229,8 +229,14 @@ function videoEmbed(href) {
         return id ? { id, provider: 'youtube' } : null;
     }
     if (host === 'youtube.com' || host === 'm.youtube.com') {
-        const id = url.searchParams.get('v');
-        return id ? { id, provider: 'youtube' } : null;
+        const v = url.searchParams.get('v');
+        if (v) return { id: v, provider: 'youtube' };
+        // Shorts/embed/live/v URLs carry the id in the path, not a ?v= param.
+        const [kind, id] = url.pathname.split('/').filter(Boolean);
+        if (id && (kind === 'shorts' || kind === 'embed' || kind === 'live' || kind === 'v')) {
+            return { id, provider: 'youtube', short: kind === 'shorts' };
+        }
+        return null;
     }
     if (host === 'vimeo.com') {
         const id = url.pathname.split('/').filter(Boolean)[0];
@@ -527,6 +533,9 @@ function loadPanelEmbeds(panel, title) {
         if (slot.querySelector('iframe') || slot._playerTeardown) return; // already loaded
         const info = videoEmbed(slot.dataset.href);
         if (!info) return; // not YouTube/Vimeo — leave the slot untouched
+        // Shorts are vertical; .media--short frames them 9:16 and caps their height
+        // (see CSS) unless the author pinned data-ratio.
+        if (info.short && !slot.dataset.ratio) slot.classList.add('media--short');
         // data-autoplay="on"/"off" is an explicit toggle; without it, a film autoplays
         // only if it LEADS the panel (nothing rendered above it), so a dek or still
         // first makes a film click-to-play unless it opts back in with data-autoplay="on".

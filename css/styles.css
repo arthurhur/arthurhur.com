@@ -332,6 +332,16 @@ main {
     display: block;
 }
 
+/* YouTube Shorts are vertical. Cap the width (aspect-ratio drives the height) so a
+   cell that goes full-width — e.g. a grid stacked to one column on phones — doesn't
+   blow the Short up to full-bleed; center what's left of the cell. A pinned data-ratio
+   still wins via the slot's inline style. */
+.media--video.media--short {
+    aspect-ratio: 9 / 16;
+    max-width: 260px;
+    margin-inline: auto;
+}
+
 /* Custom sound control for a controls=0 hero/film (no native volume button). The
    overlay catches clicks — click anywhere unmutes — while a separate speaker button
    (the only way to mute back) sits above it. See script.js. */
