@@ -412,22 +412,29 @@ function mountYouTube(slot, info, title, autoplay) {
     });
 }
 
-// Load every YouTube/Vimeo embed in a panel when it opens. Only the first video
-// block autoplays (and only when motion is welcome); the rest wait for a click.
-// Every YouTube film runs through the controls-free IFrame API player (mountYouTube)
-// so it stays clean and carries our sound control; Vimeo loads as a plain iframe. A
-// slot's own data-title overrides the project title for the accessible name.
+// Load every YouTube/Vimeo embed in a panel when it opens. At most one film
+// autoplays — the first that wants to, and only when motion is welcome; the rest wait
+// for a click. A film's data-autoplay ("on"/"off") overrides the positional default
+// (a film that LEADS the panel autoplays). Every YouTube film runs through the
+// controls-free IFrame API player (mountYouTube) so it stays clean and carries our
+// sound control; Vimeo loads as a plain iframe. A slot's own data-title overrides the
+// project title for the accessible name.
 function loadPanelEmbeds(panel, title) {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const body = panel.querySelector('.panel-body');
+    let autoplayed = false; // only the first film that wants autoplay gets it
     panel.querySelectorAll('.media--video[data-href]').forEach((slot, i) => {
         if (slot.querySelector('iframe') || slot._ytTeardown) return; // already loaded
         const info = videoEmbed(slot.dataset.href);
         if (!info) return; // not YouTube/Vimeo — leave the slot untouched
-        // Autoplay is reserved for a hero film that LEADS the panel — nothing
-        // rendered above it. Put a dek, a still, or anything else first and every
-        // film becomes click-to-play, so autoplay never fires off-screen.
-        const autoplay = i === 0 && leadsPanel(slot, body) && !reduceMotion;
+        // data-autoplay="on"/"off" is an explicit toggle; without it, a film autoplays
+        // only if it LEADS the panel (nothing rendered above it), so a dek or still
+        // first makes a film click-to-play unless it opts back in with data-autoplay="on".
+        const wants = slot.dataset.autoplay === 'on' ? true
+            : slot.dataset.autoplay === 'off' ? false
+            : i === 0 && leadsPanel(slot, body);
+        const autoplay = wants && !autoplayed && !reduceMotion;
+        if (autoplay) autoplayed = true;
         if (info.provider === 'youtube') {
             mountYouTube(slot, info, title, autoplay);
         } else {
