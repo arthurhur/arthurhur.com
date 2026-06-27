@@ -270,13 +270,29 @@ function makeIframe(src, title) {
 // project title for the iframe's accessible name.
 function loadPanelEmbeds(panel, title) {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const body = panel.querySelector('.panel-body');
     panel.querySelectorAll('.media--video[data-href]').forEach((slot, i) => {
         if (slot.querySelector('iframe')) return; // already loaded
         const info = videoEmbed(slot.dataset.href);
         if (!info) return; // not YouTube/Vimeo — leave the slot untouched
-        const autoplay = i === 0 && !reduceMotion;
+        // Autoplay is reserved for a hero film that LEADS the panel — nothing
+        // rendered above it. Put a dek, a still, or anything else first and every
+        // film becomes click-to-play, so autoplay never fires off-screen.
+        const autoplay = i === 0 && leadsPanel(slot, body) && !reduceMotion;
         slot.replaceChildren(makeIframe(embedSrc(info, autoplay), slot.dataset.title || title));
     });
+}
+
+// True when `el` is the very first thing in `container`: no element precedes it
+// at any level up the tree (so a film that's the first item of a leading grid
+// still counts as leading the panel).
+function leadsPanel(el, container) {
+    let node = el;
+    while (node && node !== container) {
+        if (node.previousElementSibling) return false;
+        node = node.parentElement;
+    }
+    return node === container;
 }
 
 // Tear down every player when a panel collapses, so playback stops and the next
