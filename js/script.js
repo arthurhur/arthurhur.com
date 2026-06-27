@@ -172,6 +172,16 @@ function setupAccordion(background) {
 
         row.addEventListener('click', () => {
             const isOpen = row.getAttribute('aria-expanded') === 'true';
+            const willOpen = !isOpen;
+
+            // If another row is open above this one, collapsing it shrinks the page
+            // above the row we just clicked and carries it upward — past the top of the
+            // screen and out of view. Let it ride up with the collapse, but clamp it at
+            // the top so it stops there instead of sailing off (see holdRowAtTop). (Only
+            // when opening; on close the clicked row's own panel is below it, so it
+            // doesn't move.)
+            const hadOtherOpen = rows.some(
+                (r) => r !== row && r.getAttribute('aria-expanded') === 'true');
 
             // Single-open: collapse any other expanded row and stop its film(s).
             rows.forEach((other) => {
@@ -183,11 +193,11 @@ function setupAccordion(background) {
                 }
             });
 
-            const willOpen = !isOpen;
             row.setAttribute('aria-expanded', String(willOpen));
             panel.classList.toggle('open', willOpen);
 
             if (willOpen) {
+                if (hadOtherOpen) holdRowAtTop(row);
                 loadPanelEmbeds(panel, title);
                 const bgimg = row.dataset.bgimg;
                 background.pin(bgimg ? `url("${bgimg}")` : '');
@@ -197,6 +207,24 @@ function setupAccordion(background) {
             }
         });
     });
+}
+
+// As a sibling panel above `row` animates closed, the row rides upward with the
+// shrinking page. Let that ride happen, but don't let the row climb past the top of
+// the viewport and out of view: clamp it there so it "scrolls up and stops at the
+// top". One-sided — we only scroll when the row has risen above the line (drift < 0),
+// pulling it back down to the line, so below it the upward motion still tracks the
+// 0.35s collapse untouched. Runs once synchronously (covers reduced-motion's instant
+// collapse) then each frame until the transition has run.
+function holdRowAtTop(row) {
+    const TOP_GAP = 0; // viewport-top offset the row stops at (its own padding adds air)
+    const deadline = performance.now() + 450; // a hair past the 0.35s collapse
+    const step = (now) => {
+        const drift = row.getBoundingClientRect().top - TOP_GAP;
+        if (drift < 0) window.scrollBy(0, drift); // risen above the line — pull back to it
+        if (now < deadline) requestAnimationFrame(step);
+    };
+    step(performance.now());
 }
 
 /* ---- Video embeds ---------------------------------------------------------
