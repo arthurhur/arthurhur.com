@@ -241,22 +241,22 @@ function videoEmbed(href) {
     return null;
 }
 
-// Build the embed URL, trimming each player's branding where allowed and muting
-// the autoplay so browsers permit it. Both providers loop (YouTube's loop=1 needs
-// playlist set to the same id) so the film never lands on the branded end/outro
-// screen. Every YouTube embed gets controls=0 to stay clean — so a loop restart
-// can't flash the control bar (no param suppresses just that), and non-leading films
-// read like the hero. Leading films autoplay muted; non-leading films wait for a click
-// (then play with sound). This path is also the hero's fallback when the IFrame API
-// can't load; the API player does the same.
+// Build the embed URL, trimming each player's branding where allowed and muting the
+// autoplay so browsers permit it. YouTube always loops (loop=1 needs playlist set to
+// the same id) so it never lands on a branded end screen, and controls=0 keeps the
+// loop restart from flashing the control bar (no param suppresses just that) while
+// making non-leading films read like the hero. Vimeo loops only when it autoplays, so
+// a clicked Vimeo plays once. Leading films autoplay muted; non-leading films wait for
+// a click (then play with sound). This path is also the hero's fallback when the
+// IFrame API can't load; the API player does the same.
 function embedSrc(info, autoplay) {
     if (info.provider === 'youtube') {
         const params = ['rel=0', 'iv_load_policy=3', 'playsinline=1', 'loop=1', `playlist=${info.id}`, 'controls=0'];
         if (autoplay) params.push('autoplay=1', 'mute=1');
         return `https://www.youtube.com/embed/${info.id}?${params.join('&')}`;
     }
-    const params = ['title=0', 'byline=0', 'portrait=0', 'loop=1'];
-    if (autoplay) params.push('autoplay=1', 'muted=1');
+    const params = ['title=0', 'byline=0', 'portrait=0'];
+    if (autoplay) params.push('autoplay=1', 'muted=1', 'loop=1');
     return `https://player.vimeo.com/video/${info.id}?${params.join('&')}`;
 }
 
