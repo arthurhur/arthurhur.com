@@ -204,14 +204,16 @@ function setupAccordion(background) {
  * panel opens (keeps a dozen-odd players and their third-party scripts off the
  * initial page load). A film that LEADS its panel autoplays muted on open — the
  * only autoplay browsers allow without friction; non-leading films wait for a
- * click. Both loop. Under prefers-reduced-motion nothing autoplays. Slots whose
- * link isn't YouTube/Vimeo are left untouched.
+ * click. An autoplaying film loops as ambient background; a clicked film plays
+ * once. Under prefers-reduced-motion nothing autoplays. Slots whose link isn't
+ * YouTube/Vimeo are left untouched.
  *
- * Every YouTube film plays through the IFrame Player API with controls=0 (see
- * mountYouTube) so it stays clean and loops without flashing the control bar — a
- * seek/replay re-arms that bar, so it can only be kept hidden by removing it.
- * controls=0 also drops the native volume button, so the player carries our own
- * sound control (buildSoundControls). Vimeo stays on the simple-iframe path below.
+ * Every YouTube film plays through the IFrame Player API with controls=0 so it stays
+ * chrome-free (a seek/replay re-arms its bar, so it can only be kept hidden by removing
+ * it); with no native volume button it carries our own sound control (buildSoundControls).
+ * An autoplaying Vimeo lead is wrapped by Vimeo's Player API too, with a one-time
+ * overlay for click-anywhere-to-unmute that then hands off to Vimeo's native controls
+ * (see mountVimeo). A clicked Vimeo stays on the simple-iframe path below.
  */
 function videoEmbed(href) {
     let url;
@@ -296,7 +298,7 @@ function loadYouTubeApi() {
     return ytApiPromise;
 }
 
-// Custom sound control for a controls=0 player (which has no native volume button).
+// Custom sound control for a controls-free player (which has no native volume button).
 // A transparent overlay over the player catches clicks while muted: a click anywhere
 // unmutes — the whole film is a tap-to-unmute target. Once unmuted the overlay goes
 // click-through (CSS), so clicks reach the player again (pause / toggle chrome); only
@@ -304,10 +306,12 @@ function loadYouTubeApi() {
 // the overlay (not nested) so it stays tappable when the overlay is click-through.
 // Muted: the speaker shows persistently (it invites the tap). Unmuted: it tucks away
 // and reappears on hover, the way player chrome does (CSS). Pass startMuted=false for
-// a film the viewer chose to play (it starts with sound on).
+// a film the viewer chose to play (it starts with sound on). `controls` is a small
+// provider-agnostic adapter — { mute(), unmute(), isPlaying() } — so YouTube and Vimeo
+// share this overlay.
 const ICON_MUTED = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z"/></svg>';
 const ICON_SOUND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
-function buildSoundControls(slot, player, YT, startMuted = true) {
+function buildSoundControls(slot, controls, startMuted = true) {
     let muted = startMuted;
 
     const overlay = document.createElement('div');
@@ -325,14 +329,14 @@ function buildSoundControls(slot, player, YT, startMuted = true) {
 
     const unmute = () => {
         if (!muted) return;
-        player.unMute();
+        controls.unmute();
         muted = false;
         render();
     };
     // Mute is only reachable via the speaker, and only while playing.
     const mute = () => {
-        if (muted || player.getPlayerState() !== YT.PlayerState.PLAYING) return;
-        player.mute();
+        if (muted || !controls.isPlaying()) return;
+        controls.mute();
         muted = true;
         render();
     };
@@ -347,23 +351,25 @@ function buildSoundControls(slot, player, YT, startMuted = true) {
     slot.appendChild(button); // sibling of the overlay so it stays tappable when the overlay is click-through
 }
 
-// Every live IFrame API player in the open panel. When one starts playing it pauses
-// the rest, so only one film plays at a time. (Vimeo's plain iframes aren't tracked.)
+// Every live API player in the open panel (YouTube or Vimeo). When one starts playing
+// it pauses the rest, so only one film plays at a time. (A clicked Vimeo is a plain
+// iframe with no API, so it isn't tracked.)
 const activePlayers = new Set();
 function pauseOtherPlayers(current) {
     activePlayers.forEach((p) => {
         if (p === current) return;
-        try { p.pauseVideo(); } catch (_) { /* player already gone */ }
+        try { (p.pauseVideo || p.pause).call(p); } catch (_) { /* player already gone */ }
     });
 }
 
 // Mount a controls-free (controls=0) YouTube player with our own sound overlay
-// (buildSoundControls), so the film stays clean and still has a volume control. We
-// own the loop (ENDED → seek 0 + play) so it restarts without flashing chrome. A
-// leading film autoplays muted (the overlay's click-anywhere unmutes); a clicked film
-// loads paused and, once played, plays with sound (autoplay=false → starts unmuted,
-// speaker mutes). A teardown stored on the slot destroys the player when the panel
-// closes. If the API can't load, fall back to a plain iframe (embedSrc keeps controls=0).
+// (buildSoundControls), so the film stays clean and still has a volume control. A
+// leading film autoplays muted (the overlay's click-anywhere unmutes) and loops as
+// ambient background — we own the loop (ENDED → seek 0 + play) so it restarts without
+// flashing chrome. A clicked film loads paused, plays with sound (starts unmuted,
+// speaker mutes), and plays once. A teardown stored on the slot destroys the player
+// when the panel closes. If the API can't load, fall back to a plain iframe (embedSrc
+// keeps controls=0).
 function mountYouTube(slot, info, title, autoplay) {
     const mount = document.createElement('div'); // YT replaces this node with its iframe
     slot.replaceChildren(mount);
@@ -371,7 +377,7 @@ function mountYouTube(slot, info, title, autoplay) {
     let player = null;
     let destroyed = false;
 
-    slot._ytTeardown = () => {
+    slot._playerTeardown = () => {
         destroyed = true;
         if (player) {
             activePlayers.delete(player);
@@ -392,14 +398,18 @@ function mountYouTube(slot, info, title, autoplay) {
                 onReady: (e) => {
                     if (destroyed) return;
                     activePlayers.add(e.target);
-                    buildSoundControls(slot, e.target, YT, autoplay); // autoplay starts muted; a clicked film starts unmuted
+                    buildSoundControls(slot, {
+                        mute: () => e.target.mute(),
+                        unmute: () => e.target.unMute(),
+                        isPlaying: () => e.target.getPlayerState() === YT.PlayerState.PLAYING,
+                    }, autoplay); // autoplay starts muted; a clicked film starts unmuted
                 },
                 onStateChange: (e) => {
                     if (destroyed) return;
                     if (e.data === YT.PlayerState.PLAYING) {
                         pauseOtherPlayers(e.target); // one film at a time
-                    } else if (e.data === YT.PlayerState.ENDED) {
-                        e.target.seekTo(0, true);
+                    } else if (e.data === YT.PlayerState.ENDED && autoplay) {
+                        e.target.seekTo(0, true); // ambient autoplay loops; a clicked film plays once
                         e.target.playVideo();
                     }
                 },
@@ -407,8 +417,69 @@ function mountYouTube(slot, info, title, autoplay) {
         });
     }).catch(() => {
         if (destroyed) return;
-        slot._ytTeardown = null;
+        slot._playerTeardown = null;
         slot.replaceChildren(makeIframe(embedSrc(info, autoplay), slot.dataset.title || title));
+    });
+}
+
+// Vimeo's Player API, loaded lazily on the first autoplaying Vimeo lead. Memoised;
+// rejects on error/timeout so the caller can fall back to a plain iframe.
+let vimeoApiPromise;
+function loadVimeoApi() {
+    if (window.Vimeo && window.Vimeo.Player) return Promise.resolve(window.Vimeo);
+    if (vimeoApiPromise) return vimeoApiPromise;
+    vimeoApiPromise = new Promise((resolve, reject) => {
+        const tag = document.createElement('script');
+        tag.src = 'https://player.vimeo.com/api/player.js';
+        tag.onload = () => (window.Vimeo && window.Vimeo.Player) ? resolve(window.Vimeo) : reject(new Error('Vimeo API missing'));
+        tag.onerror = () => reject(new Error('Vimeo API failed to load'));
+        document.head.appendChild(tag);
+        setTimeout(() => reject(new Error('Vimeo API load timed out')), 4000);
+    });
+    return vimeoApiPromise;
+}
+
+// Mount an autoplaying Vimeo lead like the YouTube hero: a muted, looping autoplay
+// wrapped by Vimeo's Player API. A transparent one-time gate over it unmutes on the
+// first click (the whole film is tap-to-unmute), then removes itself so Vimeo's native
+// controls — including its own mute — take over for pause/scrub/fullscreen. We keep the
+// native controls because background mode hides all chrome but is non-interactive, and
+// controls=0 isn't reliably honored; the native bar auto-hides during the muted autoplay
+// (the gate blocks hover) so it stays fairly clean until you engage. Only used for
+// autoplay leads; a clicked Vimeo is a plain native-controls iframe too (see
+// loadPanelEmbeds). A teardown stored on the slot destroys the player when the panel
+// closes. If the API can't load, fall back to a plain autoplay iframe with native controls.
+function mountVimeo(slot, info, title) {
+    let player = null;
+    let destroyed = false;
+
+    slot._playerTeardown = () => {
+        destroyed = true;
+        if (player) {
+            activePlayers.delete(player);
+            if (typeof player.destroy === 'function') player.destroy(); // async; fire and forget
+        }
+        player = null;
+    };
+
+    loadVimeoApi().then((Vimeo) => {
+        if (destroyed) return;
+        const src = `https://player.vimeo.com/video/${info.id}?autoplay=1&muted=1&loop=1&title=0&byline=0&portrait=0&playsinline=1`;
+        const iframe = makeIframe(src, slot.dataset.title || title); // direct child of the slot so the .media--video iframe sizing applies
+        slot.replaceChildren(iframe);
+        player = new Vimeo.Player(iframe);
+        activePlayers.add(player);
+        player.on('play', () => pauseOtherPlayers(player)); // one film at a time
+
+        // One-time tap-to-unmute gate, then hand off to Vimeo's native controls.
+        const gate = document.createElement('div');
+        gate.className = 'media__sound';
+        gate.addEventListener('click', () => { player.setMuted(false); gate.remove(); });
+        slot.appendChild(gate);
+    }).catch(() => {
+        if (destroyed) return;
+        slot._playerTeardown = null;
+        slot.replaceChildren(makeIframe(embedSrc(info, true), slot.dataset.title || title));
     });
 }
 
@@ -417,14 +488,16 @@ function mountYouTube(slot, info, title, autoplay) {
 // for a click. A film's data-autoplay ("on"/"off") overrides the positional default
 // (a film that LEADS the panel autoplays). Every YouTube film runs through the
 // controls-free IFrame API player (mountYouTube) so it stays clean and carries our
-// sound control; Vimeo loads as a plain iframe. A slot's own data-title overrides the
-// project title for the accessible name.
+// sound control; an autoplaying Vimeo lead runs through mountVimeo (tap-to-unmute,
+// then native controls), while a clicked Vimeo loads as a plain native-controls
+// iframe. A slot's own data-title
+// overrides the project title for the accessible name.
 function loadPanelEmbeds(panel, title) {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const body = panel.querySelector('.panel-body');
     let autoplayed = false; // only the first film that wants autoplay gets it
     panel.querySelectorAll('.media--video[data-href]').forEach((slot, i) => {
-        if (slot.querySelector('iframe') || slot._ytTeardown) return; // already loaded
+        if (slot.querySelector('iframe') || slot._playerTeardown) return; // already loaded
         const info = videoEmbed(slot.dataset.href);
         if (!info) return; // not YouTube/Vimeo — leave the slot untouched
         // data-autoplay="on"/"off" is an explicit toggle; without it, a film autoplays
@@ -437,6 +510,8 @@ function loadPanelEmbeds(panel, title) {
         if (autoplay) autoplayed = true;
         if (info.provider === 'youtube') {
             mountYouTube(slot, info, title, autoplay);
+        } else if (info.provider === 'vimeo' && autoplay) {
+            mountVimeo(slot, info, title);
         } else {
             slot.replaceChildren(makeIframe(embedSrc(info, autoplay), slot.dataset.title || title));
         }
@@ -462,9 +537,9 @@ function unloadEmbeds(panel) {
     panel.querySelectorAll('.media--video').forEach((slot) => {
         // Tear down an API player first (destroys it so playback stops), then
         // clear the slot — destroy leaves its iframe node behind.
-        if (typeof slot._ytTeardown === 'function') {
-            slot._ytTeardown();
-            slot._ytTeardown = null;
+        if (typeof slot._playerTeardown === 'function') {
+            slot._playerTeardown();
+            slot._playerTeardown = null;
             slot.replaceChildren();
             slot.classList.remove('is-unmuted'); // the sound-state class lives on the persistent slot now
         } else if (slot.querySelector('iframe')) {
