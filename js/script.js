@@ -75,11 +75,12 @@ function setupBackground() {
     }
 
     return {
-        // Pin a film as the resting background and show it immediately.
+        // Pin a film as the resting background and show it immediately. A row
+        // with no still (image falsy) pins the default, clearing the backdrop.
         pin(image) {
-            pinned = image;
+            pinned = image || defaultBg;
             clearTimeout(timeoutId);
-            show(image);
+            show(pinned);
         },
         // Stop pinning. Don't force a swap: if the cursor is still on the row
         // its film stays until you leave, then it settles back to default.
@@ -187,7 +188,8 @@ function setupAccordion(background) {
             if (isOpen) {
                 background.unpin();
             } else {
-                background.pin(`url("${row.dataset.bgimg}")`);
+                const bgimg = row.dataset.bgimg;
+                background.pin(bgimg ? `url("${bgimg}")` : '');
             }
         });
     });
