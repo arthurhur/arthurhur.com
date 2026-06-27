@@ -295,10 +295,62 @@ function loadYouTubeApi() {
     return ytApiPromise;
 }
 
-// Mount the hero player: a muted, controls-free (controls=0) autoplay loop. We
-// own the loop (ENDED → seek 0 + play) so it restarts cleanly. A teardown stored
-// on the slot destroys the player when the panel closes. If the API can't load,
-// fall back to a plain autoplay iframe (embedSrc adds controls=0 there too).
+// Custom sound control for a controls=0 player (which has no native volume button).
+// A transparent overlay over the player catches clicks while muted: a click anywhere
+// unmutes — the whole film is a tap-to-unmute target. Once unmuted the overlay goes
+// click-through (CSS), so clicks reach the player again (pause / toggle chrome); only
+// the speaker button mutes back, and only while playing. The speaker is a sibling of
+// the overlay (not nested) so it stays tappable when the overlay is click-through.
+// Muted: the speaker shows persistently (it invites the tap). Unmuted: it tucks away
+// and reappears on hover, the way player chrome does (CSS). Pass startMuted=false for
+// a film the viewer chose to play (it starts with sound on).
+const ICON_MUTED = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z"/></svg>';
+const ICON_SOUND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
+function buildSoundControls(slot, player, YT, startMuted = true) {
+    let muted = startMuted;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'media__sound';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'media__mute';
+
+    const render = () => {
+        slot.classList.toggle('is-unmuted', !muted); // drives the overlay's click-through + button CSS
+        button.innerHTML = muted ? ICON_MUTED : ICON_SOUND;
+        button.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
+    };
+    render();
+
+    const unmute = () => {
+        if (!muted) return;
+        player.unMute();
+        muted = false;
+        render();
+    };
+    // Mute is only reachable via the speaker, and only while playing.
+    const mute = () => {
+        if (muted || player.getPlayerState() !== YT.PlayerState.PLAYING) return;
+        player.mute();
+        muted = true;
+        render();
+    };
+
+    overlay.addEventListener('click', unmute); // click anywhere unmutes; no-op once on
+    button.addEventListener('click', (e) => {
+        e.stopPropagation(); // don't let the overlay re-unmute the click that just muted
+        muted ? unmute() : mute();
+    });
+
+    slot.appendChild(overlay);
+    slot.appendChild(button); // sibling of the overlay so it stays tappable when the overlay is click-through
+}
+
+// Mount the hero player: a muted, controls-free (controls=0) autoplay loop with our
+// own sound overlay (buildSoundControls). We own the loop (ENDED → seek 0 + play) so
+// it restarts cleanly. A teardown stored on the slot destroys the player when the
+// panel closes. If the API can't load, fall back to a plain autoplay iframe (embedSrc
+// adds controls=0 there too).
 function mountHeroYouTube(slot, info, title) {
     const mount = document.createElement('div'); // YT replaces this node with its iframe
     slot.replaceChildren(mount);
@@ -321,6 +373,10 @@ function mountHeroYouTube(slot, info, title) {
             // would flash on every loop; there's no param to suppress just that.
             playerVars: { autoplay: 1, mute: 1, controls: 0, rel: 0, iv_load_policy: 3, playsinline: 1 },
             events: {
+                onReady: (e) => {
+                    if (destroyed) return;
+                    buildSoundControls(slot, e.target, YT); // starts muted (autoplay)
+                },
                 onStateChange: (e) => {
                     if (destroyed) return;
                     if (e.data === YT.PlayerState.ENDED) {
@@ -387,6 +443,7 @@ function unloadEmbeds(panel) {
             slot._heroTeardown();
             slot._heroTeardown = null;
             slot.replaceChildren();
+            slot.classList.remove('is-unmuted'); // the sound-state class lives on the persistent slot now
         } else if (slot.querySelector('iframe')) {
             slot.replaceChildren();
         }

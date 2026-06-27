@@ -333,6 +333,67 @@ main {
     display: block;
 }
 
+/* Custom sound control for a controls=0 hero/film (no native volume button). The
+   overlay catches clicks — click anywhere unmutes — while a separate speaker button
+   (the only way to mute back) sits above it. See script.js. */
+.media__sound {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    cursor: pointer; /* the whole film is tap-to-unmute while muted */
+}
+
+/* Once unmuted the overlay stops catching clicks, so they reach the player again
+   (pause / toggle chrome); only the speaker still mutes. */
+.media--video.is-unmuted .media__sound {
+    pointer-events: none;
+    cursor: default;
+}
+
+.media__mute {
+    position: absolute;
+    top: 0.7rem;
+    right: 0.7rem;
+    z-index: 3; /* above the click-catching overlay so it stays tappable while muted */
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    cursor: pointer;
+    transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.media__mute svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+    fill: currentColor;
+}
+
+.media__mute:hover {
+    background: rgba(0, 0, 0, 0.65);
+}
+
+/* Once unmuted, the toggle behaves like chrome on hover-capable devices: hidden
+   until you hover (or focus) the film. Touch keeps it visible — no hover to bring
+   it back. */
+@media (hover: hover) {
+    .media--video.is-unmuted .media__mute {
+        opacity: 0;
+        pointer-events: none;
+    }
+    .media--video.is-unmuted:hover .media__mute,
+    .media--video.is-unmuted:focus-within .media__mute {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
 /* Empty placeholder where a still will go; replace with a <figure class="figure">. */
 .media--placeholder {
     aspect-ratio: 16 / 9;
@@ -516,7 +577,8 @@ main {
     .bg-layer,
     .panel,
     .chev,
-    .row {
+    .row,
+    .media__mute {
         transition: none;
     }
 }
