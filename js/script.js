@@ -149,7 +149,9 @@ function setupScrollReveal(sources, show, defaultBg) {
 
 /* ---- Accordion ------------------------------------------------------------
  * Clone the placeholder panel template after each row, wire ARIA, and toggle
- * one open at a time. Opening a project pins its film; closing un-pins.
+ * one open at a time. Opening a project pins its film and lazy-loads its
+ * YouTube/Vimeo embed; closing (or opening another) un-pins and unloads the
+ * embed so playback stops.
  */
 function setupAccordion(background) {
     const template = document.getElementById('panel-tpl');
@@ -165,7 +167,6 @@ function setupAccordion(background) {
         panel.id = id;
         panel.setAttribute('role', 'region');
         panel.setAttribute('aria-label', `${title} — details`);
-        panel.querySelector('.watch').href = row.dataset.href;
 
         row.setAttribute('aria-controls', id);
         row.setAttribute('aria-expanded', 'false');
@@ -174,23 +175,84 @@ function setupAccordion(background) {
         row.addEventListener('click', () => {
             const isOpen = row.getAttribute('aria-expanded') === 'true';
 
-            // Single-open: collapse any other expanded row.
+            // Single-open: collapse any other expanded row and stop its film.
             rows.forEach((other) => {
                 if (other !== row) {
                     other.setAttribute('aria-expanded', 'false');
-                    other.nextElementSibling.classList.remove('open');
+                    const otherPanel = other.nextElementSibling;
+                    otherPanel.classList.remove('open');
+                    unloadEmbed(otherPanel);
                 }
             });
 
-            row.setAttribute('aria-expanded', String(!isOpen));
-            panel.classList.toggle('open', !isOpen);
+            const willOpen = !isOpen;
+            row.setAttribute('aria-expanded', String(willOpen));
+            panel.classList.toggle('open', willOpen);
 
-            if (isOpen) {
-                background.unpin();
-            } else {
+            if (willOpen) {
+                loadEmbed(panel, row.dataset.href, title);
                 const bgimg = row.dataset.bgimg;
                 background.pin(bgimg ? `url("${bgimg}")` : '');
+            } else {
+                unloadEmbed(panel);
+                background.unpin();
             }
         });
     });
+}
+
+/* ---- Video embeds ---------------------------------------------------------
+ * Map a project's watch link to a YouTube/Vimeo embed URL, then drop it into
+ * the panel's video slot only when the panel opens — this keeps a dozen-odd
+ * players and their third-party scripts off the initial page load. Links that
+ * aren't YouTube/Vimeo are left as the placeholder.
+ */
+function embedUrl(href) {
+    let url;
+    try {
+        url = new URL(href);
+    } catch {
+        return null;
+    }
+    const host = url.hostname.replace(/^www\./, '');
+
+    if (host === 'youtu.be') {
+        const id = url.pathname.slice(1);
+        return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+        const id = url.searchParams.get('v');
+        return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+    if (host === 'vimeo.com') {
+        const id = url.pathname.split('/').filter(Boolean)[0];
+        return /^\d+$/.test(id) ? `https://player.vimeo.com/video/${id}` : null;
+    }
+    if (host === 'player.vimeo.com') {
+        return href;
+    }
+    return null;
+}
+
+function loadEmbed(panel, href, title) {
+    const slot = panel.querySelector('.media--video');
+    if (!slot || slot.querySelector('iframe')) return;
+
+    const src = embedUrl(href);
+    if (!src) return;
+
+    const iframe = document.createElement('iframe');
+    iframe.src = src;
+    iframe.title = title;
+    iframe.loading = 'lazy';
+    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+    iframe.allowFullscreen = true;
+    iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+    slot.replaceChildren(iframe);
+}
+
+// Remove the iframe so its film stops playing when a panel collapses.
+function unloadEmbed(panel) {
+    const iframe = panel.querySelector('.media--video iframe');
+    if (iframe) iframe.remove();
 }
