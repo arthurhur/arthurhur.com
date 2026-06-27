@@ -471,6 +471,14 @@ function mountVimeo(slot, info, title) {
         activePlayers.add(player);
         player.on('play', () => pauseOtherPlayers(player)); // one film at a time
 
+        // Fit the frame to the film's true aspect when it isn't 16:9 (old SD videos),
+        // unless the author pinned a ratio. data-ratio (loadPanelEmbeds) wins.
+        if (!slot.dataset.ratio) {
+            Promise.all([player.getVideoWidth(), player.getVideoHeight()])
+                .then(([w, h]) => { if (!destroyed && w && h) slot.style.aspectRatio = `${w} / ${h}`; })
+                .catch(() => { /* keep the default 16:9 */ });
+        }
+
         // One-time tap-to-unmute gate, then hand off to Vimeo's native controls.
         const gate = document.createElement('div');
         gate.className = 'media__sound';
@@ -497,6 +505,9 @@ function loadPanelEmbeds(panel, title) {
     const body = panel.querySelector('.panel-body');
     let autoplayed = false; // only the first film that wants autoplay gets it
     panel.querySelectorAll('.media--video[data-href]').forEach((slot, i) => {
+        // data-ratio (e.g. "4/3" or "4:3") overrides the default 16:9 frame for films
+        // shot in another aspect, so the slot fits the video instead of pillarboxing it.
+        if (slot.dataset.ratio) slot.style.aspectRatio = slot.dataset.ratio.replace(':', '/');
         if (slot.querySelector('iframe') || slot._playerTeardown) return; // already loaded
         const info = videoEmbed(slot.dataset.href);
         if (!info) return; // not YouTube/Vimeo — leave the slot untouched
