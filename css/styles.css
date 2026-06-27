@@ -310,7 +310,6 @@ main {
     align-items: center;
     justify-content: center;
     background: rgba(20, 18, 16, 0.55);
-    border: 1px solid var(--rule);
     border-radius: 2px;
     color: var(--muted);
     font-family: var(--mono);
@@ -424,7 +423,6 @@ main {
     display: block;
     width: 100%;
     height: auto;
-    border: 1px solid var(--rule);
     border-radius: 2px;
 }
 
