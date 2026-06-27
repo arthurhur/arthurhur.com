@@ -205,8 +205,9 @@ function setupAccordion(background) {
  * Map a project's watch link to a YouTube/Vimeo embed, loaded only when the
  * panel opens (keeps a dozen-odd players and their third-party scripts off the
  * initial page load). The film autoplays muted on open — the only autoplay
- * browsers allow without friction — and the player's own UI handles unmuting.
- * Under prefers-reduced-motion we don't autoplay; the native controls start it.
+ * browsers allow without friction — and loops, so it never lands on YouTube's
+ * branded end screen; the player's own UI handles unmuting. Under
+ * prefers-reduced-motion we don't autoplay; the native controls start it.
  * Links that aren't YouTube/Vimeo are left as the placeholder.
  */
 function videoEmbed(href) {
@@ -237,15 +238,18 @@ function videoEmbed(href) {
     return null;
 }
 
-// Build the embed URL, trimming each player's title/branding chrome where
-// allowed and muting the autoplay so browsers permit it.
+// Build the embed URL, trimming each player's branding where allowed and muting
+// the autoplay so browsers permit it. Both providers loop (YouTube's loop=1
+// needs playlist set to the same id) so the film never lands on the branded
+// end/outro screen. Trade-off on YouTube: each loop restart re-shows the control
+// bar for ~3s, which there's no param to suppress.
 function embedSrc(info, autoplay) {
     if (info.provider === 'youtube') {
-        const params = ['rel=0', 'iv_load_policy=3', 'color=white', 'playsinline=1'];
+        const params = ['rel=0', 'iv_load_policy=3', 'color=white', 'playsinline=1', 'loop=1', `playlist=${info.id}`];
         if (autoplay) params.push('autoplay=1', 'mute=1');
         return `https://www.youtube.com/embed/${info.id}?${params.join('&')}`;
     }
-    const params = ['title=0', 'byline=0', 'portrait=0'];
+    const params = ['title=0', 'byline=0', 'portrait=0', 'loop=1'];
     if (autoplay) params.push('autoplay=1', 'muted=1');
     return `https://player.vimeo.com/video/${info.id}?${params.join('&')}`;
 }
