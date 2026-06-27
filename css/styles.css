@@ -320,6 +320,7 @@ main {
 }
 
 .media--video {
+    position: relative; /* anchors overlays (e.g. the hero unmute control) over the player */
     width: 100%;
     aspect-ratio: 16 / 9;
     overflow: hidden;

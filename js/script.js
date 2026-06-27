@@ -203,10 +203,16 @@ function setupAccordion(background) {
  * Map a project's watch link to a YouTube/Vimeo embed, loaded only when the
  * panel opens (keeps a dozen-odd players and their third-party scripts off the
  * initial page load). The film autoplays muted on open — the only autoplay
- * browsers allow without friction — and loops, so it never lands on YouTube's
- * branded end screen; the player's own UI handles unmuting. Under
- * prefers-reduced-motion we don't autoplay; the native controls start it.
- * Slots whose link isn't YouTube/Vimeo are left untouched.
+ * browsers allow without friction — and loops. Non-hero films wait for a click
+ * and load with their native controls. Under prefers-reduced-motion we don't
+ * autoplay; the native controls start it. Slots whose link isn't YouTube/Vimeo
+ * are left untouched.
+ *
+ * One special case: a YouTube film that LEADS its panel (the hero) plays through
+ * the IFrame Player API with controls=0 (see mountHeroYouTube) so it stays clean
+ * on open and loops without flashing the control bar — a seek/replay re-arms that
+ * bar, so it can only be kept hidden by removing it. Everything else (non-hero
+ * YouTube, all Vimeo) stays on the simple-iframe path below.
  */
 function videoEmbed(href) {
     let url;
@@ -237,14 +243,15 @@ function videoEmbed(href) {
 }
 
 // Build the embed URL, trimming each player's branding where allowed and muting
-// the autoplay so browsers permit it. Both providers loop (YouTube's loop=1
-// needs playlist set to the same id) so the film never lands on the branded
-// end/outro screen. Trade-off on YouTube: each loop restart re-shows the control
-// bar for ~3s, which there's no param to suppress.
+// the autoplay so browsers permit it. Both providers loop (YouTube's loop=1 needs
+// playlist set to the same id) so the film never lands on the branded end/outro
+// screen. An autoplaying YouTube embed also gets controls=0 so a loop restart
+// can't flash the control bar (no param suppresses just that) — this path is the
+// hero's fallback when the IFrame API can't load; the API player does the same.
 function embedSrc(info, autoplay) {
     if (info.provider === 'youtube') {
         const params = ['rel=0', 'iv_load_policy=3', 'color=white', 'playsinline=1', 'loop=1', `playlist=${info.id}`];
-        if (autoplay) params.push('autoplay=1', 'mute=1');
+        if (autoplay) params.push('autoplay=1', 'mute=1', 'controls=0');
         return `https://www.youtube.com/embed/${info.id}?${params.join('&')}`;
     }
     const params = ['title=0', 'byline=0', 'portrait=0', 'loop=1'];
@@ -263,23 +270,97 @@ function makeIframe(src, title) {
     return iframe;
 }
 
+/* ---- Hero YouTube player ---------------------------------------------------
+ * The IFrame Player API, loaded lazily on the first hero film (never at page
+ * load). Memoised: the window.YT check up top lets a later open recover even if
+ * an earlier attempt timed out. Rejects on error/timeout so the caller can fall
+ * back to a plain autoplay iframe.
+ */
+let ytApiPromise;
+function loadYouTubeApi() {
+    if (window.YT && window.YT.Player) return Promise.resolve(window.YT);
+    if (ytApiPromise) return ytApiPromise;
+    ytApiPromise = new Promise((resolve, reject) => {
+        const prev = window.onYouTubeIframeAPIReady;
+        window.onYouTubeIframeAPIReady = () => {
+            if (typeof prev === 'function') prev();
+            resolve(window.YT);
+        };
+        const tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        tag.onerror = () => reject(new Error('YT API failed to load'));
+        document.head.appendChild(tag);
+        setTimeout(() => reject(new Error('YT API load timed out')), 4000);
+    });
+    return ytApiPromise;
+}
+
+// Mount the hero player: a muted, controls-free (controls=0) autoplay loop. We
+// own the loop (ENDED → seek 0 + play) so it restarts cleanly. A teardown stored
+// on the slot destroys the player when the panel closes. If the API can't load,
+// fall back to a plain autoplay iframe (embedSrc adds controls=0 there too).
+function mountHeroYouTube(slot, info, title) {
+    const mount = document.createElement('div'); // YT replaces this node with its iframe
+    slot.replaceChildren(mount);
+
+    let player = null;
+    let destroyed = false;
+
+    slot._heroTeardown = () => {
+        destroyed = true;
+        if (player && typeof player.destroy === 'function') player.destroy();
+        player = null;
+    };
+
+    loadYouTubeApi().then((YT) => {
+        if (destroyed) return;
+        player = new YT.Player(mount, {
+            videoId: info.id,
+            // controls: 0 — the only way to keep the player clean. A loop restart
+            // (seek/replay) re-arms YouTube's control bar, so with controls on it
+            // would flash on every loop; there's no param to suppress just that.
+            playerVars: { autoplay: 1, mute: 1, controls: 0, rel: 0, iv_load_policy: 3, playsinline: 1 },
+            events: {
+                onStateChange: (e) => {
+                    if (destroyed) return;
+                    if (e.data === YT.PlayerState.ENDED) {
+                        e.target.seekTo(0, true);
+                        e.target.playVideo();
+                    }
+                },
+            },
+        });
+    }).catch(() => {
+        if (destroyed) return;
+        slot._heroTeardown = null;
+        slot.replaceChildren(makeIframe(embedSrc(info, true), slot.dataset.title || title));
+    });
+}
+
 // Load every YouTube/Vimeo embed in a panel when it opens. Only the first video
-// block autoplays (and only when motion is welcome); the rest wait for a click.
-// Autoplay is muted — the only autoplay browsers allow without friction — and
-// the player's own UI handles unmuting. A slot's own data-title overrides the
-// project title for the iframe's accessible name.
+// block autoplays (and only when motion is welcome); the rest wait for a click
+// and load with their native controls. A leading YouTube film autoplays muted and
+// controls-free via the IFrame API (mountHeroYouTube); everything else is a plain
+// iframe. A slot's own data-title overrides the project title for the accessible
+// name.
 function loadPanelEmbeds(panel, title) {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const body = panel.querySelector('.panel-body');
     panel.querySelectorAll('.media--video[data-href]').forEach((slot, i) => {
-        if (slot.querySelector('iframe')) return; // already loaded
+        if (slot.querySelector('iframe') || slot._heroTeardown) return; // already loaded
         const info = videoEmbed(slot.dataset.href);
         if (!info) return; // not YouTube/Vimeo — leave the slot untouched
         // Autoplay is reserved for a hero film that LEADS the panel — nothing
         // rendered above it. Put a dek, a still, or anything else first and every
         // film becomes click-to-play, so autoplay never fires off-screen.
         const autoplay = i === 0 && leadsPanel(slot, body) && !reduceMotion;
-        slot.replaceChildren(makeIframe(embedSrc(info, autoplay), slot.dataset.title || title));
+        // A leading YouTube film gets the controls-free API player; everything else
+        // (non-hero YouTube, all Vimeo) loads as a plain iframe.
+        if (autoplay && info.provider === 'youtube') {
+            mountHeroYouTube(slot, info, title);
+        } else {
+            slot.replaceChildren(makeIframe(embedSrc(info, autoplay), slot.dataset.title || title));
+        }
     });
 }
 
@@ -300,6 +381,14 @@ function leadsPanel(el, container) {
 function unloadEmbeds(panel) {
     if (!panel) return;
     panel.querySelectorAll('.media--video').forEach((slot) => {
-        if (slot.querySelector('iframe')) slot.replaceChildren();
+        // Tear down a hero API player first (destroys it so playback stops), then
+        // clear the slot — destroy leaves its iframe node behind.
+        if (typeof slot._heroTeardown === 'function') {
+            slot._heroTeardown();
+            slot._heroTeardown = null;
+            slot.replaceChildren();
+        } else if (slot.querySelector('iframe')) {
+            slot.replaceChildren();
+        }
     });
 }
