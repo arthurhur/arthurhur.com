@@ -354,6 +354,10 @@ main {
     line-height: 1.6;
 }
 
+.figure {
+    margin: 0; /* needed once figures nest inside a .media-grid (UA gives them margins) */
+}
+
 .figure img {
     display: block;
     width: 100%;
@@ -369,6 +373,28 @@ main {
     font-size: 0.62rem;
     text-transform: uppercase;
     letter-spacing: 0.18em;
+}
+
+/* One grid wrapper for any cluster of media — images or videos. It's a block in
+   the panel flow like any other; gap handles spacing inside, the flow rhythm
+   handles spacing around it. Stacks to one column on phones (see below). */
+.media-grid {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.media-grid--2 { grid-template-columns: repeat(2, 1fr); }
+.media-grid--3 { grid-template-columns: repeat(3, 1fr); }
+
+/* Opt-in: force a uniform tile shape (crops to fill) for a tidy gallery. */
+.media-grid--tiles .figure img {
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+}
+
+/* Opt-in: let the first item span the full width above the rest. */
+.media-grid--feature > :first-child {
+    grid-column: 1 / -1;
 }
 
 .watch {
@@ -468,6 +494,10 @@ main {
 
     .panel-body {
         padding-left: calc(28px + 0.85rem);
+    }
+
+    .media-grid {
+        grid-template-columns: 1fr; /* stack media clusters on phones */
     }
 
     .contact-block {
