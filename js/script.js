@@ -202,17 +202,16 @@ function setupAccordion(background) {
 /* ---- Video embeds ---------------------------------------------------------
  * Map a project's watch link to a YouTube/Vimeo embed, loaded only when the
  * panel opens (keeps a dozen-odd players and their third-party scripts off the
- * initial page load). The film autoplays muted on open — the only autoplay
- * browsers allow without friction — and loops. Non-hero films wait for a click
- * and load with their native controls. Under prefers-reduced-motion we don't
- * autoplay; the native controls start it. Slots whose link isn't YouTube/Vimeo
- * are left untouched.
+ * initial page load). A film that LEADS its panel autoplays muted on open — the
+ * only autoplay browsers allow without friction; non-leading films wait for a
+ * click. Both loop. Under prefers-reduced-motion nothing autoplays. Slots whose
+ * link isn't YouTube/Vimeo are left untouched.
  *
- * One special case: a YouTube film that LEADS its panel (the hero) plays through
- * the IFrame Player API with controls=0 (see mountHeroYouTube) so it stays clean
- * on open and loops without flashing the control bar — a seek/replay re-arms that
- * bar, so it can only be kept hidden by removing it. Everything else (non-hero
- * YouTube, all Vimeo) stays on the simple-iframe path below.
+ * Every YouTube film plays through the IFrame Player API with controls=0 (see
+ * mountYouTube) so it stays clean and loops without flashing the control bar — a
+ * seek/replay re-arms that bar, so it can only be kept hidden by removing it.
+ * controls=0 also drops the native volume button, so the player carries our own
+ * sound control (buildSoundControls). Vimeo stays on the simple-iframe path below.
  */
 function videoEmbed(href) {
     let url;
@@ -245,13 +244,15 @@ function videoEmbed(href) {
 // Build the embed URL, trimming each player's branding where allowed and muting
 // the autoplay so browsers permit it. Both providers loop (YouTube's loop=1 needs
 // playlist set to the same id) so the film never lands on the branded end/outro
-// screen. An autoplaying YouTube embed also gets controls=0 so a loop restart
-// can't flash the control bar (no param suppresses just that) — this path is the
-// hero's fallback when the IFrame API can't load; the API player does the same.
+// screen. Every YouTube embed gets controls=0 to stay clean — so a loop restart
+// can't flash the control bar (no param suppresses just that), and non-leading films
+// read like the hero. Leading films autoplay muted; non-leading films wait for a click
+// (then play with sound). This path is also the hero's fallback when the IFrame API
+// can't load; the API player does the same.
 function embedSrc(info, autoplay) {
     if (info.provider === 'youtube') {
-        const params = ['rel=0', 'iv_load_policy=3', 'color=white', 'playsinline=1', 'loop=1', `playlist=${info.id}`];
-        if (autoplay) params.push('autoplay=1', 'mute=1', 'controls=0');
+        const params = ['rel=0', 'iv_load_policy=3', 'playsinline=1', 'loop=1', `playlist=${info.id}`, 'controls=0'];
+        if (autoplay) params.push('autoplay=1', 'mute=1');
         return `https://www.youtube.com/embed/${info.id}?${params.join('&')}`;
     }
     const params = ['title=0', 'byline=0', 'portrait=0', 'loop=1'];
@@ -346,21 +347,36 @@ function buildSoundControls(slot, player, YT, startMuted = true) {
     slot.appendChild(button); // sibling of the overlay so it stays tappable when the overlay is click-through
 }
 
-// Mount the hero player: a muted, controls-free (controls=0) autoplay loop with our
-// own sound overlay (buildSoundControls). We own the loop (ENDED → seek 0 + play) so
-// it restarts cleanly. A teardown stored on the slot destroys the player when the
-// panel closes. If the API can't load, fall back to a plain autoplay iframe (embedSrc
-// adds controls=0 there too).
-function mountHeroYouTube(slot, info, title) {
+// Every live IFrame API player in the open panel. When one starts playing it pauses
+// the rest, so only one film plays at a time. (Vimeo's plain iframes aren't tracked.)
+const activePlayers = new Set();
+function pauseOtherPlayers(current) {
+    activePlayers.forEach((p) => {
+        if (p === current) return;
+        try { p.pauseVideo(); } catch (_) { /* player already gone */ }
+    });
+}
+
+// Mount a controls-free (controls=0) YouTube player with our own sound overlay
+// (buildSoundControls), so the film stays clean and still has a volume control. We
+// own the loop (ENDED → seek 0 + play) so it restarts without flashing chrome. A
+// leading film autoplays muted (the overlay's click-anywhere unmutes); a clicked film
+// loads paused and, once played, plays with sound (autoplay=false → starts unmuted,
+// speaker mutes). A teardown stored on the slot destroys the player when the panel
+// closes. If the API can't load, fall back to a plain iframe (embedSrc keeps controls=0).
+function mountYouTube(slot, info, title, autoplay) {
     const mount = document.createElement('div'); // YT replaces this node with its iframe
     slot.replaceChildren(mount);
 
     let player = null;
     let destroyed = false;
 
-    slot._heroTeardown = () => {
+    slot._ytTeardown = () => {
         destroyed = true;
-        if (player && typeof player.destroy === 'function') player.destroy();
+        if (player) {
+            activePlayers.delete(player);
+            if (typeof player.destroy === 'function') player.destroy();
+        }
         player = null;
     };
 
@@ -371,15 +387,18 @@ function mountHeroYouTube(slot, info, title) {
             // controls: 0 — the only way to keep the player clean. A loop restart
             // (seek/replay) re-arms YouTube's control bar, so with controls on it
             // would flash on every loop; there's no param to suppress just that.
-            playerVars: { autoplay: 1, mute: 1, controls: 0, rel: 0, iv_load_policy: 3, playsinline: 1 },
+            playerVars: { autoplay: autoplay ? 1 : 0, mute: autoplay ? 1 : 0, controls: 0, rel: 0, iv_load_policy: 3, playsinline: 1 },
             events: {
                 onReady: (e) => {
                     if (destroyed) return;
-                    buildSoundControls(slot, e.target, YT); // starts muted (autoplay)
+                    activePlayers.add(e.target);
+                    buildSoundControls(slot, e.target, YT, autoplay); // autoplay starts muted; a clicked film starts unmuted
                 },
                 onStateChange: (e) => {
                     if (destroyed) return;
-                    if (e.data === YT.PlayerState.ENDED) {
+                    if (e.data === YT.PlayerState.PLAYING) {
+                        pauseOtherPlayers(e.target); // one film at a time
+                    } else if (e.data === YT.PlayerState.ENDED) {
                         e.target.seekTo(0, true);
                         e.target.playVideo();
                     }
@@ -388,32 +407,29 @@ function mountHeroYouTube(slot, info, title) {
         });
     }).catch(() => {
         if (destroyed) return;
-        slot._heroTeardown = null;
-        slot.replaceChildren(makeIframe(embedSrc(info, true), slot.dataset.title || title));
+        slot._ytTeardown = null;
+        slot.replaceChildren(makeIframe(embedSrc(info, autoplay), slot.dataset.title || title));
     });
 }
 
 // Load every YouTube/Vimeo embed in a panel when it opens. Only the first video
-// block autoplays (and only when motion is welcome); the rest wait for a click
-// and load with their native controls. A leading YouTube film autoplays muted and
-// controls-free via the IFrame API (mountHeroYouTube); everything else is a plain
-// iframe. A slot's own data-title overrides the project title for the accessible
-// name.
+// block autoplays (and only when motion is welcome); the rest wait for a click.
+// Every YouTube film runs through the controls-free IFrame API player (mountYouTube)
+// so it stays clean and carries our sound control; Vimeo loads as a plain iframe. A
+// slot's own data-title overrides the project title for the accessible name.
 function loadPanelEmbeds(panel, title) {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const body = panel.querySelector('.panel-body');
     panel.querySelectorAll('.media--video[data-href]').forEach((slot, i) => {
-        if (slot.querySelector('iframe') || slot._heroTeardown) return; // already loaded
+        if (slot.querySelector('iframe') || slot._ytTeardown) return; // already loaded
         const info = videoEmbed(slot.dataset.href);
         if (!info) return; // not YouTube/Vimeo — leave the slot untouched
         // Autoplay is reserved for a hero film that LEADS the panel — nothing
         // rendered above it. Put a dek, a still, or anything else first and every
         // film becomes click-to-play, so autoplay never fires off-screen.
         const autoplay = i === 0 && leadsPanel(slot, body) && !reduceMotion;
-        // A leading YouTube film gets the controls-free API player; everything else
-        // (non-hero YouTube, all Vimeo) loads as a plain iframe.
-        if (autoplay && info.provider === 'youtube') {
-            mountHeroYouTube(slot, info, title);
+        if (info.provider === 'youtube') {
+            mountYouTube(slot, info, title, autoplay);
         } else {
             slot.replaceChildren(makeIframe(embedSrc(info, autoplay), slot.dataset.title || title));
         }
@@ -437,11 +453,11 @@ function leadsPanel(el, container) {
 function unloadEmbeds(panel) {
     if (!panel) return;
     panel.querySelectorAll('.media--video').forEach((slot) => {
-        // Tear down a hero API player first (destroys it so playback stops), then
+        // Tear down an API player first (destroys it so playback stops), then
         // clear the slot — destroy leaves its iframe node behind.
-        if (typeof slot._heroTeardown === 'function') {
-            slot._heroTeardown();
-            slot._heroTeardown = null;
+        if (typeof slot._ytTeardown === 'function') {
+            slot._ytTeardown();
+            slot._ytTeardown = null;
             slot.replaceChildren();
             slot.classList.remove('is-unmuted'); // the sound-state class lives on the persistent slot now
         } else if (slot.querySelector('iframe')) {
