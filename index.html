@@ -30,11 +30,16 @@
         <meta name="twitter:image" content="https://arthurhur.com/img/bg-chromesphere.jpg">
 
         <!-- Self-hosted fonts (declared in css/styles.css). Same-origin, so no
-             preconnect. Preload the faces used at first paint; the 500 weights
-             load via the stylesheet, covered meanwhile by metric-matched fallbacks. -->
+             preconnect. Preload every face — all five appear in the initial
+             viewport (the 500 weights drive the masthead name and the section
+             headers), so the real font is present at first paint and the swap is
+             never visible. The metric-matched fallbacks cover the brief pre-load
+             window without shifting layout. -->
         <link rel="preload" href="fonts/SchibstedGrotesk-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="preload" href="fonts/SchibstedGrotesk-500-latin.woff2" as="font" type="font/woff2" crossorigin>
         <link rel="preload" href="fonts/Newsreader-roman-var-latin.woff2" as="font" type="font/woff2" crossorigin>
         <link rel="preload" href="fonts/IBMPlexMono-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="preload" href="fonts/IBMPlexMono-500-latin.woff2" as="font" type="font/woff2" crossorigin>
         <link rel="stylesheet" href="css/styles.css">
         <link rel="icon" type="image/png" href="img/favicon.png">
         <link rel="apple-touch-icon" href="img/favicon.png">
