@@ -1,7 +1,31 @@
 document.addEventListener('DOMContentLoaded', () => {
     const background = setupBackground();
     setupAccordion(background);
+    setupJustifiedMedia();
 });
+
+/* ---- Justified media rows -------------------------------------------------
+ * A .media-grid--justified lays its figures out with flex-grow proportional to
+ * each image's aspect ratio, which makes every image in the row resolve to the
+ * same height (bottoms + captions aligned) while the row still fills its width.
+ * The proportion lives in a per-figure --ar custom property; we read it off the
+ * image's natural dimensions once it loads (works through lazy-loading and the
+ * collapsed accordion, since we key off the load event).
+ */
+function setupJustifiedMedia() {
+    const figures = document.querySelectorAll('.media-grid--justified .figure');
+    figures.forEach((figure) => {
+        const img = figure.querySelector('img');
+        if (!img) return;
+        const apply = () => {
+            if (img.naturalWidth && img.naturalHeight) {
+                figure.style.setProperty('--ar', (img.naturalWidth / img.naturalHeight).toFixed(4));
+            }
+        };
+        if (img.complete) apply();
+        img.addEventListener('load', apply);
+    });
+}
 
 /* ---- Background crossfade -------------------------------------------------
  * Two double-buffered layers; paint the incoming still on the hidden one,

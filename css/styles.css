@@ -421,6 +421,19 @@ main {
     margin-top: 1.3rem;
 }
 
+/* Media blocks get more air than the prose rhythm, uniform across every type
+   (video, single figure, grid). A caption hugs its own image (0.5rem) but needs
+   a clearly larger gap to the next block, or it reads as a label for the image
+   below it instead of the one above. Applies on both sides of any media block. */
+.panel-body > .media + *,
+.panel-body > .figure + *,
+.panel-body > .media-grid + *,
+.panel-body > * + .media,
+.panel-body > * + .figure,
+.panel-body > * + .media-grid {
+    margin-top: 2rem;
+}
+
 .panel-body p {
     max-width: 56ch;
     color: var(--muted-warm);
@@ -467,6 +480,23 @@ main {
 /* Opt-in: let the first item span the full width above the rest. */
 .media-grid--feature > :first-child {
     grid-column: 1 / -1;
+}
+
+/* Opt-in: a justified row. Each figure grows in proportion to its image's
+   aspect ratio (--ar, set from the image's natural dimensions by
+   setupJustifiedMedia), so every image in the row resolves to the SAME height —
+   their bottoms (and captions) line up, uncropped, while the row still fills the
+   full width. Falls back to equal columns until the ratios load. Must follow
+   .media-grid so its display:flex wins. */
+.media-grid--justified {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.media-grid--justified .figure {
+    flex: var(--ar, 1) 1 0;
+    min-width: 0;
 }
 
 .watch {
@@ -571,6 +601,14 @@ main {
 
     .media-grid {
         grid-template-columns: 1fr; /* stack media clusters on phones */
+    }
+
+    .media-grid--justified {
+        flex-direction: column; /* stack the justified row too */
+    }
+
+    .media-grid--justified .figure {
+        flex: none; /* full-width stacked, not ratio-proportioned */
     }
 
     .contact-block {
