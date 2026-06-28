@@ -207,7 +207,9 @@ function setupAccordion(background) {
     const rows = [...document.querySelectorAll('.row')];
 
     rows.forEach((row, i) => {
-        const panel = row.nextElementSibling;
+        // The button is wrapped in an <h3> heading, so its panel is the
+        // heading's next sibling (not the button's).
+        const panel = row.parentElement.nextElementSibling;
         if (!panel || !panel.classList.contains('panel')) return;
 
         const id = `panel-${i + 1}`;
@@ -237,7 +239,7 @@ function setupAccordion(background) {
             rows.forEach((other) => {
                 if (other !== row) {
                     other.setAttribute('aria-expanded', 'false');
-                    const otherPanel = other.nextElementSibling;
+                    const otherPanel = other.parentElement.nextElementSibling;
                     otherPanel.classList.remove('open');
                     unloadEmbeds(otherPanel);
                 }

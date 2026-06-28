@@ -249,6 +249,14 @@ main {
     border-top: 1px solid var(--rule);
 }
 
+/* Semantic <h3> wrapping each row button (WAI-ARIA accordion pattern, so
+   projects show up in the heading outline). Visually inert: kill the default
+   heading margin and inherit type so the button's own styling is untouched. */
+.row-heading {
+    margin: 0;
+    font: inherit;
+}
+
 /* ---- Row (toggle button) ---- */
 .row {
     display: grid;
