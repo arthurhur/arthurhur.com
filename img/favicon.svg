@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 22.21 16.18">
+  <!-- Generator: Adobe Illustrator 30.6.0, SVG Export Plug-In . SVG Version: 2.1.4 Build 109)  -->
+  <!-- Mark defaults to black; flips to the site cream in dark browser chrome so it stays visible. -->
+  <style>
+    @media (prefers-color-scheme: dark) {
+      rect, polygon { fill: #ece7dd; }
+    }
+  </style>
+  <rect x="19.72" width="2.49" height="16.18"/>
+  <polygon points="14.21 0 11.72 0 0 16.18 3.07 16.18 11.72 4.24 11.72 10.51 8.7 10.51 8.7 13 11.72 13 11.72 16.18 14.21 16.18 14.21 13 17.23 13 17.23 10.51 14.21 10.51 14.21 0"/>
+</svg>
