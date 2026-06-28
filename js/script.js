@@ -15,15 +15,25 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupJustifiedMedia() {
     const figures = document.querySelectorAll('.media-grid--justified .figure');
     figures.forEach((figure) => {
-        const img = figure.querySelector('img');
-        if (!img) return;
+        const media = figure.querySelector('img, video');
+        if (!media) return;
+        // Panel media now carries intrinsic width/height, so the ratio is known up
+        // front — no wait, no reflow. Fall back to measured dimensions for anything
+        // without them (img.naturalWidth / video.videoWidth).
+        const w = +media.getAttribute('width');
+        const h = +media.getAttribute('height');
+        if (w && h) {
+            figure.style.setProperty('--ar', (w / h).toFixed(4));
+            return;
+        }
         const apply = () => {
-            if (img.naturalWidth && img.naturalHeight) {
-                figure.style.setProperty('--ar', (img.naturalWidth / img.naturalHeight).toFixed(4));
-            }
+            const nw = media.naturalWidth || media.videoWidth;
+            const nh = media.naturalHeight || media.videoHeight;
+            if (nw && nh) figure.style.setProperty('--ar', (nw / nh).toFixed(4));
         };
-        if (img.complete) apply();
-        img.addEventListener('load', apply);
+        if (media.complete) apply();
+        media.addEventListener('load', apply);
+        media.addEventListener('loadedmetadata', apply);
     });
 }
 
@@ -74,7 +84,6 @@ function setupBackground() {
         // Pointer devices: hover/focus previews a film, mouse-out settles back.
         sources.forEach((el) => {
             const image = `url("${el.dataset.bgimg}")`;
-            new Image().src = el.dataset.bgimg;
 
             const preview = () => {
                 clearTimeout(timeoutId);
@@ -91,6 +100,10 @@ function setupBackground() {
             el.addEventListener('focus', preview);
             el.addEventListener('blur', settle);
         });
+        // Warm the still cache off the critical path: once the browser goes idle
+        // (after first render + fonts), preload each row's background in small
+        // batches so the first hover is instant without delaying initial load.
+        preloadWhenIdle([...sources].map((el) => el.dataset.bgimg));
     } else if (!reduceMotion) {
         // Touch devices: the film for whichever row is centred fades in as you
         // scroll. Skipped under reduced-motion, where the crossfade is off and
@@ -112,6 +125,19 @@ function setupBackground() {
             pinned = defaultBg;
         },
     };
+}
+
+/* Preload a list of image URLs during idle time, in small batches, so warming the
+ * hover-background cache never competes with first render or font loading. */
+function preloadWhenIdle(urls) {
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 200));
+    let i = 0;
+    (function pump() {
+        idle(() => {
+            for (let n = 0; n < 3 && i < urls.length; n++, i++) new Image().src = urls[i];
+            if (i < urls.length) pump();
+        });
+    })();
 }
 
 /* ---- Scroll-driven reveal (touch) -----------------------------------------
@@ -604,6 +630,20 @@ function loadPanelEmbeds(panel, title) {
             slot.replaceChildren(makeIframe(embedSrc(info, autoplay), slot.dataset.title || title));
         }
     });
+
+    // Local looping clips (former GIFs): lazy by design — the <source> has only a
+    // data-src, so nothing loads until the panel opens. Wire the real src now, then
+    // play muted and loop. Reduced motion leaves the poster still.
+    if (!reduceMotion) {
+        panel.querySelectorAll('video.gifv').forEach((v) => {
+            const source = v.querySelector('source[data-src]');
+            if (source && !source.src) {
+                source.src = source.dataset.src;
+                v.load();
+            }
+            v.play().catch(() => {});
+        });
+    }
 }
 
 // True when `el` is the very first thing in `container`: no element precedes it
@@ -634,4 +674,6 @@ function unloadEmbeds(panel) {
             slot.replaceChildren();
         }
     });
+    // Pause the local looping clips so a collapsed panel isn't decoding video.
+    panel.querySelectorAll('video.gifv').forEach((v) => v.pause());
 }
