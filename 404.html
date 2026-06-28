@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <!-- Google tag (gtag.js) — keep 404 hits in analytics so broken inbound links surface -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-01V10S2M76"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag() { dataLayer.push(arguments); }
+            gtag('js', new Date());
+            gtag('config', 'G-01V10S2M76');
+        </script>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="robots" content="noindex">
+        <meta name="theme-color" content="#141210">
+        <title>Page not found — Arthur Hur</title>
+
+        <!-- Absolute paths so the page resolves from any URL depth; @font-face URLs
+             in the stylesheet resolve relative to the stylesheet, so fonts load too. -->
+        <link rel="stylesheet" href="/css/styles.css">
+        <link rel="icon" type="image/png" href="/img/favicon.png">
+
+        <style>
+            body { display: flex; align-items: center; }
+            .notfound {
+                max-width: 1140px;
+                width: 100%;
+                margin: 0 auto;
+                padding: clamp(2.75rem, 6vw, 4rem) clamp(1.5rem, 5vw, 3rem);
+            }
+            .notfound .eyebrow {
+                margin: 0 0 1.2rem;
+                font-family: var(--mono);
+                font-weight: 500;
+                font-size: 11.5px;
+                letter-spacing: 0.18em;
+                text-transform: uppercase;
+                color: var(--accent);
+            }
+            .notfound h1 {
+                margin: 0;
+                max-width: 720px;
+                font-family: var(--serif);
+                font-weight: 400;
+                font-size: clamp(2.1rem, 5vw, 3.35rem);
+                line-height: 1.13;
+                letter-spacing: -0.013em;
+                text-wrap: balance;
+            }
+            .notfound p {
+                max-width: 520px;
+                margin: 1.6rem 0 2.2rem;
+                font-size: 16.5px;
+                line-height: 1.62;
+                color: var(--muted-warm);
+            }
+            .home-link {
+                font-family: var(--mono);
+                font-size: 13px;
+                color: var(--accent);
+                text-decoration: none;
+                border-bottom: 1px solid rgba(201, 162, 75, 0.4);
+                padding-bottom: 2px;
+                transition: border-color 0.2s ease;
+            }
+            .home-link:hover,
+            .home-link:focus-visible { border-bottom-color: var(--accent); outline: none; }
+        </style>
+    </head>
+    <body>
+        <main class="notfound">
+            <p class="eyebrow">404</p>
+            <h1>This page wandered off.</h1>
+            <p>The page you’re after doesn’t exist — it may have moved, or the link was mistyped.</p>
+            <a class="home-link" href="/">Back to the work →</a>
+        </main>
+    </body>
+</html>
