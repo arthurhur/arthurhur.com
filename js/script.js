@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const background = setupBackground();
     setupAccordion(background);
     setupJustifiedMedia();
-    warmVideoOriginsOnIntent();
 });
 
 /* ---- Justified media rows -------------------------------------------------
@@ -426,47 +425,6 @@ function makeIframe(src, title) {
     iframe.allowFullscreen = true;
     iframe.referrerPolicy = 'strict-origin-when-cross-origin';
     return iframe;
-}
-
-/* ---- Warm the video pipes on first intent ---------------------------------
- * Opening a project pays a cold start to YouTube/Vimeo — DNS + TLS + the API
- * script — at the exact moment of engagement, the most noticeable latency on
- * the site. So the first time a visitor shows intent (hovers a row, touches,
- * scrolls, or tabs in), before any click, open connections to the video CDNs
- * and prewarm the YouTube IFrame API (the one script every YouTube film reuses).
- * Fires once; nothing third-party is touched on initial load, so a bounce pays
- * nothing. The bytes themselves stream from a per-session *.googlevideo.com host
- * that can't be preconnected, so there's nothing to add for that leg.
- */
-let videoPipesWarmed = false;
-function warmVideoOrigins() {
-    if (videoPipesWarmed) return;
-    videoPipesWarmed = true;
-    [
-        'https://www.youtube.com',  // embed iframe + IFrame API
-        'https://i.ytimg.com',      // YouTube thumbnails
-        'https://player.vimeo.com', // Vimeo iframe + Player API
-        'https://i.vimeocdn.com',   // Vimeo thumbnails
-        'https://f.vimeocdn.com',   // Vimeo media segments
-    ].forEach((href) => {
-        const link = document.createElement('link');
-        link.rel = 'preconnect';
-        link.href = href;
-        link.crossOrigin = ''; // film + script fetches are cross-origin
-        document.head.appendChild(link);
-    });
-    // Load + run the IFrame API now (memoised — the real mount reuses this
-    // promise) so the first open doesn't wait on the third-party download. A
-    // rejection just means the open retries, so swallow it here.
-    loadYouTubeApi().catch(() => {});
-}
-
-// Attach the one-time intent triggers, covering mouse, touch, scroll and
-// keyboard. Each listener auto-removes after firing; the flag guards the rest.
-function warmVideoOriginsOnIntent() {
-    const opts = { once: true, passive: true };
-    ['pointerover', 'touchstart', 'scroll', 'keydown'].forEach((type) =>
-        document.addEventListener(type, warmVideoOrigins, opts));
 }
 
 /* ---- Hero YouTube player ---------------------------------------------------
