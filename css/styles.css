@@ -273,24 +273,26 @@ main {
     color: var(--fg);
     text-align: left;
     cursor: pointer;
-    transition: background 0.25s ease, padding-left 0.25s ease;
+    transition: background 0.25s ease, transform 0.25s ease;
 }
 
 /* Hover/indent is a pointer-only affordance, gated so it can't latch on touch —
    iOS holds a tapped element in :hover until you tap elsewhere, which left the
    title stuck indented. On touch the same look is driven by .is-active, which JS
-   puts on the row at the scroll line or under a finger (see setupTouchPreview). */
+   puts on the row at the scroll line or under a finger (see setupTouchPreview).
+   The indent is a transform, not padding, so shifting the row never narrows the
+   title column — which would re-wrap the text as rows slide in and out. */
 @media (hover: hover) {
     .row:hover {
         background: var(--hover-tint);
-        padding-left: 1.05rem;
+        transform: translateX(0.55rem);
     }
 }
 
 .row.is-active,
 .row:focus-visible {
     background: var(--hover-tint);
-    padding-left: 1.05rem;
+    transform: translateX(0.55rem);
     outline: none;
 }
 
