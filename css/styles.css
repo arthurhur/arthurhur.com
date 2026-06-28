@@ -1,3 +1,70 @@
+/* Self-hosted, latin-subset woff2. Newsreader is one variable file (opsz 6–72,
+   wght 200–800); the others are static 400/500. Only weights/styles the CSS uses
+   are shipped — no italics, no 300/600. See CLAUDE.md for the why. */
+@font-face {
+    font-family: 'Newsreader';
+    font-style: normal;
+    font-weight: 200 800;
+    font-display: swap;
+    src: url('../fonts/Newsreader-roman-var-latin.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Schibsted Grotesk';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/SchibstedGrotesk-400-latin.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Schibsted Grotesk';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('../fonts/SchibstedGrotesk-500-latin.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'IBM Plex Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/IBMPlexMono-400-latin.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'IBM Plex Mono';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('../fonts/IBMPlexMono-500-latin.woff2') format('woff2');
+}
+
+/* Metric-matched fallbacks: local system faces re-shaped (size-adjust + metric
+   overrides) to occupy the same box as the web fonts, so the swap shifts no
+   layout. Numbers computed from font metrics (capsize method); don't hand-tune. */
+@font-face {
+    font-family: 'Schibsted Grotesk Fallback';
+    src: local('Arial');
+    size-adjust: 104.92%;
+    ascent-override: 93.08%;
+    descent-override: 24.57%;
+    line-gap-override: 0%;
+}
+@font-face {
+    font-family: 'Newsreader Fallback';
+    src: local('Georgia');
+    size-adjust: 91.53%;
+    ascent-override: 80.30%;
+    descent-override: 28.95%;
+    line-gap-override: 0%;
+}
+@font-face {
+    font-family: 'IBM Plex Mono Fallback';
+    src: local('Courier New');
+    size-adjust: 99.98%;
+    ascent-override: 102.52%;
+    descent-override: 27.50%;
+    line-gap-override: 0%;
+}
+
 :root {
     --bg: #141210;
     --fg: #ece7dd;
@@ -11,9 +78,9 @@
     /* No film at rest — the warm background shows; films appear on hover. */
     --bg-default: none;
 
-    --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
-    --sans: 'Schibsted Grotesk', system-ui, -apple-system, sans-serif;
-    --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+    --serif: 'Newsreader', 'Newsreader Fallback', Georgia, 'Times New Roman', serif;
+    --sans: 'Schibsted Grotesk', 'Schibsted Grotesk Fallback', system-ui, -apple-system, sans-serif;
+    --mono: 'IBM Plex Mono', 'IBM Plex Mono Fallback', ui-monospace, Menlo, monospace;
 }
 
 * {
