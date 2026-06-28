@@ -276,11 +276,28 @@ main {
     transition: background 0.25s ease, padding-left 0.25s ease;
 }
 
-.row:hover,
+/* Hover/indent is a pointer-only affordance, gated so it can't latch on touch —
+   iOS holds a tapped element in :hover until you tap elsewhere, which left the
+   title stuck indented. On touch the same look is driven by .is-active, which JS
+   puts on the row at the scroll line or under a finger (see setupTouchPreview). */
+@media (hover: hover) {
+    .row:hover {
+        background: var(--hover-tint);
+        padding-left: 1.05rem;
+    }
+}
+
+.row.is-active,
 .row:focus-visible {
     background: var(--hover-tint);
     padding-left: 1.05rem;
     outline: none;
+}
+
+/* The open row keeps the tint (without the indent) so "selected" still reads
+   when it isn't the previewed row. */
+.row[aria-expanded="true"] {
+    background: var(--hover-tint);
 }
 
 /* Two-digit year, serving as the left-hand index marker. */
@@ -312,15 +329,22 @@ main {
     transition: color 0.2s ease;
 }
 
-/* Once a row is hovered its still fades in behind the whole list, so these
-   small descriptions can go muddy over the image. Lift them all while the work
-   section is engaged, and brighten the row you're actually on. */
-.work:hover .description {
-    color: var(--muted-warm);
+/* Once a row's still fades in behind the whole list, these small descriptions
+   can go muddy over the image. On hover devices, lift them all while the section
+   is engaged; everywhere, brighten the active/focused/open row. */
+@media (hover: hover) {
+    .work:hover .description {
+        color: var(--muted-warm);
+    }
+
+    .row:hover .description {
+        color: var(--fg);
+    }
 }
 
-.row:hover .description,
-.row:focus-visible .description {
+.row.is-active .description,
+.row:focus-visible .description,
+.row[aria-expanded="true"] .description {
     color: var(--fg);
 }
 
@@ -350,7 +374,13 @@ main {
     transform: translate(-50%, -50%) rotate(90deg);
 }
 
-.row:hover .chev,
+@media (hover: hover) {
+    .row:hover .chev {
+        color: var(--fg);
+    }
+}
+
+.row.is-active .chev,
 .row:focus-visible .chev {
     color: var(--fg);
 }

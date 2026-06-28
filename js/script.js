@@ -44,8 +44,8 @@ function setupJustifiedMedia() {
  * A "pinned" image is the resting background. On pointer devices hover/focus
  * previews a film; on mouse-out/blur it settles back to whatever is pinned
  * (the open project's film, or the default when nothing is open). On touch,
- * scroll position drives the preview instead (see setupScrollReveal). The
- * accordion drives pinning in both cases.
+ * scroll position (and touch-hold) drive the preview instead, emulating hover
+ * (see setupTouchPreview). The accordion drives pinning in both cases.
  */
 function setupBackground() {
     const layers = document.querySelectorAll('.bg-layer');
@@ -77,6 +77,8 @@ function setupBackground() {
     const canHover = window.matchMedia('(hover: hover)').matches;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let timeoutId;
+    let pinnedActive = false;   // a panel is open; its still owns the backdrop
+    let touchPreview = null;    // touch-only hover emulation (see setupTouchPreview)
 
     const sources = document.querySelectorAll('main [data-bgimg]');
 
@@ -104,25 +106,35 @@ function setupBackground() {
         // (after first render + fonts), preload each row's background in small
         // batches so the first hover is instant without delaying initial load.
         preloadWhenIdle([...sources].map((el) => el.dataset.bgimg));
-    } else if (!reduceMotion) {
-        // Touch devices: the film for whichever row is centred fades in as you
-        // scroll. Skipped under reduced-motion, where the crossfade is off and
-        // changing the background on scroll would only hard-cut.
-        setupScrollReveal(sources, show, defaultBg);
+    } else {
+        // Touch devices have no hover, so warm each still just before it scrolls
+        // into view, then emulate hover: a scroll line ~a third down the screen
+        // (or a touch-hold) previews the row it lands on. Reduced-motion keeps the
+        // warming but skips the scroll-driven swaps (they'd only hard-cut).
+        preloadOnApproach(sources);
+        if (!reduceMotion) {
+            touchPreview = setupTouchPreview(sources, show, defaultBg, () => pinnedActive);
+        }
     }
 
     return {
         // Pin a film as the resting background and show it immediately. A row
         // with no still (image falsy) pins the default, clearing the backdrop.
         pin(image) {
+            pinnedActive = true;
             pinned = image || defaultBg;
             clearTimeout(timeoutId);
+            if (touchPreview) touchPreview.clear();   // the open row owns the highlight now
             show(pinned);
         },
-        // Stop pinning. Don't force a swap: if the cursor is still on the row
-        // its film stays until you leave, then it settles back to default.
+        // Stop pinning. On a pointer device, don't force a swap: if the cursor is
+        // still on the row its film stays until you leave. On touch, fall back to
+        // whatever the scroll line is previewing (or the default).
         unpin() {
+            pinnedActive = false;
             pinned = defaultBg;
+            if (touchPreview) touchPreview.resume();
+            else if (!canHover) show(defaultBg);
         },
     };
 }
@@ -140,21 +152,11 @@ function preloadWhenIdle(urls) {
     })();
 }
 
-/* ---- Scroll-driven reveal (touch) -----------------------------------------
- * No hover on touch, so the film for whichever row sits at the vertical centre
- * of the viewport fades in as you scroll. A zero-height IntersectionObserver
- * band at centre names the active row cheaply (no per-frame scroll handler);
- * a second, wider band preloads each film just before it's needed.
- */
-function setupScrollReveal(sources, show, defaultBg) {
-    const items = [...sources];
-    if (!items.length) return;
-
-    const imageOf = (el) => `url("${el.dataset.bgimg}")`;
-
-    // Preload each film once it comes within ~2 screens, then stop watching it,
-    // so a phone isn't fetching all 27 stills up front.
-    const preloader = new IntersectionObserver((entries, obs) => {
+/* ---- Still preloading (touch) ---------------------------------------------
+ * Warm each row's background once it comes within ~2 screens, then stop watching
+ * it, so a phone isn't fetching all 27 stills up front. */
+function preloadOnApproach(sources) {
+    const pre = new IntersectionObserver((entries, obs) => {
         entries.forEach((e) => {
             if (e.isIntersecting) {
                 new Image().src = e.target.dataset.bgimg;
@@ -162,39 +164,105 @@ function setupScrollReveal(sources, show, defaultBg) {
             }
         });
     }, { rootMargin: '200% 0px' });
-    items.forEach((el) => preloader.observe(el));
+    sources.forEach((el) => pre.observe(el));
+}
 
-    // Track which rows straddle the centre line; show the nearest one.
+/* ---- Touch hover-emulation -------------------------------------------------
+ * No pointer on touch, so stand in for hover: the row crossing a line ~a third
+ * down the viewport — or one held under a finger — takes the hover look (the
+ * .is-active class highlights and indents it) and its still fades in, all without
+ * committing. A genuine tap opens the row (the accordion pins its still); a hold
+ * or a scroll only previews, so we swallow that click. Suspended while a panel is
+ * open (the pinned still owns the screen). Returns { clear, resume }: the
+ * background drops the highlight on open and restores it on close.
+ */
+function setupTouchPreview(sources, show, defaultBg, isPinned) {
+    const items = [...sources];
+    const imageOf = (el) => `url("${el.dataset.bgimg}")`;
+    let active = null;
+
+    const setActive = (row) => {
+        if (row === active) return;
+        if (active) active.classList.remove('is-active');
+        active = row;
+        if (active) active.classList.add('is-active');
+        if (!isPinned()) show(active ? imageOf(active) : defaultBg);
+    };
+
+    // A zero-height band at the line names the row to preview; when more than one
+    // straddles it, pick whichever's centre is nearest.
+    const LINE = 33;   // percent from the top
     const centred = new Set();
-    const update = () => {
-        const mid = window.innerHeight / 2;
+    const pickFromLine = () => {
+        if (isPinned()) return;
+        const line = window.innerHeight * (LINE / 100);
         if (centred.size) {
             let best = null;
             let bestDist = Infinity;
             centred.forEach((el) => {
                 const r = el.getBoundingClientRect();
-                const dist = Math.abs((r.top + r.bottom) / 2 - mid);
+                const dist = Math.abs((r.top + r.bottom) / 2 - line);
                 if (dist < bestDist) {
                     bestDist = dist;
                     best = el;
                 }
             });
-            show(imageOf(best));
-        } else if (items[0].getBoundingClientRect().top > mid) {
-            // Scrolled back above the first row — restore the clean default.
-            show(defaultBg);
+            setActive(best);
+        } else if (!items.length || items[0].getBoundingClientRect().top > line) {
+            setActive(null);   // scrolled above the first row — clean default
         }
-        // Otherwise we're in a gap or an open panel: keep the last film up.
     };
 
-    const centre = new IntersectionObserver((entries) => {
+    const band = new IntersectionObserver((entries) => {
         entries.forEach((e) => {
             if (e.isIntersecting) centred.add(e.target);
             else centred.delete(e.target);
         });
-        update();
-    }, { rootMargin: '-50% 0px -50% 0px', threshold: 0 });
-    items.forEach((el) => centre.observe(el));
+        pickFromLine();
+    }, { rootMargin: `-${LINE}% 0px -${100 - LINE}% 0px`, threshold: 0 });
+    items.forEach((el) => band.observe(el));
+
+    // Tap vs. hold: a quick, still touch is left to fire its click (the accordion
+    // opens the row); a longer press or a drag is preview-only. A capture-phase
+    // listener on the document drops that click before the accordion's row
+    // handler sees it. Reset on each touchstart so a stale flag can't eat a tap.
+    const TAP_MS = 250, TAP_SLOP = 10;
+    let downAt = 0, downX = 0, downY = 0, suppressClick = false;
+
+    items.forEach((row) => {
+        row.addEventListener('touchstart', (e) => {
+            const t = e.touches[0];
+            downAt = Date.now();
+            downX = t.clientX;
+            downY = t.clientY;
+            suppressClick = false;
+            if (!isPinned()) setActive(row);
+        }, { passive: true });
+
+        row.addEventListener('touchend', (e) => {
+            const t = e.changedTouches[0];
+            const moved = Math.hypot(t.clientX - downX, t.clientY - downY) > TAP_SLOP;
+            if (moved || Date.now() - downAt > TAP_MS) suppressClick = true;
+        }, { passive: true });
+    });
+
+    document.addEventListener('click', (e) => {
+        if (suppressClick && e.target.closest('.row')) {
+            e.stopPropagation();
+            e.preventDefault();
+            suppressClick = false;
+        }
+    }, true);
+
+    return {
+        // The newly-opened row owns the highlight; drop any preview indent.
+        clear() {
+            if (active) active.classList.remove('is-active');
+            active = null;
+        },
+        // Back to browsing: repaint whatever the line is now over.
+        resume() { pickFromLine(); },
+    };
 }
 
 /* ---- Accordion ------------------------------------------------------------
