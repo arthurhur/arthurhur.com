@@ -110,11 +110,14 @@ body {
  */
 .bg-layer {
     position: fixed;
-    top: 0;
+    bottom: 0;
     left: 0;
     right: 0;
     /* Large-viewport height (100vh fallback): a static box, unlike inset: 0,
-       which tracks mobile browser chrome and makes `cover` rescale on scroll. */
+       which tracks mobile browser chrome and makes `cover` rescale on scroll.
+       Anchored to whichever edge the chrome does NOT occupy, so the box also
+       doesn't ride along when the chrome slides in: bottom for top-URL-bar
+       browsers (Android, desktop), top for iOS's bottom address bar. */
     height: 100vh;
     height: 100lvh;
     z-index: -2;
@@ -127,6 +130,15 @@ body {
 
 .bg-layer.is-visible {
     opacity: 1;
+}
+
+/* iOS only (-webkit-touch-callout exists in no other engine): Safari's
+   address bar sits at the bottom, so there the TOP edge is the stable one. */
+@supports (-webkit-touch-callout: none) {
+    .bg-layer {
+        top: 0;
+        bottom: auto;
+    }
 }
 
 /* Left-weighted scrim in the background's own colour: invisible at rest,
