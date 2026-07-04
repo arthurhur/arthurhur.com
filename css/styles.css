@@ -110,7 +110,13 @@ body {
  */
 .bg-layer {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    /* Large-viewport height (100vh fallback): a static box, unlike inset: 0,
+       which tracks mobile browser chrome and makes `cover` rescale on scroll. */
+    height: 100vh;
+    height: 100lvh;
     z-index: -2;
     background-position: center;
     background-repeat: no-repeat;
