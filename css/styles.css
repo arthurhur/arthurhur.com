@@ -141,16 +141,6 @@ body {
     }
 }
 
-/* iOS Chrome/Firefox/Edge (flagged in js/script.js — same WebKit engine, so
-   @supports can't single them out): chrome collapses at BOTH edges, so no
-   edge holds still. Gluing the box's center to the viewport's center leaves
-   only half the difference between the two chrome heights as drift. */
-.ios-alt-browser .bg-layer {
-    top: 50%;
-    bottom: auto;
-    transform: translateY(-50%);
-}
-
 /* Left-weighted scrim in the background's own colour: invisible at rest,
    a legibility wash once a film fades in. */
 .scrim {
