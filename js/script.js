@@ -1,3 +1,11 @@
+/* iOS browsers other than Safari (Chrome/Firefox/Edge) run the same WebKit
+ * engine, so CSS @supports can't tell them apart — but unlike Safari they
+ * collapse browser chrome at BOTH screen edges, which changes which .bg-layer
+ * anchor holds still (see styles.css). Flag them for CSS. */
+if (/iPhone|iPad|iPod/.test(navigator.userAgent) && /CriOS|FxiOS|EdgiOS/.test(navigator.userAgent)) {
+    document.documentElement.classList.add('ios-alt-browser');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const background = setupBackground();
     setupAccordion(background);
