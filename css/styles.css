@@ -483,9 +483,11 @@ main {
     margin-inline: auto;
 }
 
-/* Custom sound control for a controls=0 hero/film (no native volume button). The
-   overlay catches clicks — click anywhere unmutes — while a separate speaker button
-   (the only way to mute back) sits above it. See script.js. */
+/* Custom sound control for a muted film. The overlay catches clicks — click anywhere
+   unmutes — while a separate speaker button sits above it. On a controls=0 YouTube
+   (no native volume button) it persists and the speaker is the only way to mute back;
+   on Vimeo the whole control is a one-shot gate that clears on the first unmute,
+   handing off to the native bar. See script.js. */
 .media__sound {
     position: absolute;
     inset: 0;
